@@ -3,6 +3,17 @@
 ## Description
 This is a sample application for the MTC OHBot.
 
+## Pre-Requesites
+
+**NOTE** You Need both versions of Python intlled to circumvent the antiquated OhBot libraries...
+
+[Download python 3.11.0](https://www.python.org/ftp/python/3.11.0/python-3.11.0-amd64.exe)
+
+[Download python 3.6.4](https://www.python.org/downloads/release/python-364/)
+
+[Microsoft Visual C++ 14+ Build Tools](https://aka.ms/vs/17/release/vs_BuildTools.exe)
+
+
 ## Configuration
 1. Create a `.\env\local.env`
 2. Set the contents as follows:
