@@ -23,13 +23,13 @@ speech_key = os.getenv("SPEECH_KEY")
 service_region = os.getenv("REGION")
 speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
 # Set up Azure Text-to-Speech language 
-# speech_config.speech_synthesis_language = "en-CA"
+speech_config.speech_synthesis_language = os.getenv("RECOGNITION_LANGUAGE")
 # Set up Azure Speech-to-Text language recognition
 speech_config.speech_recognition_language = os.getenv("RECOGNITION_LANGUAGE")
 
 # Set up the voice configuration
-#speech_config.speech_synthesis_voice_name = "en-CA-ClaraNeural"
-#speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
+speech_config.speech_synthesis_voice_name = "en-CA-ClaraNeural"
+speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
 
 # start a new conversation context
 def start_new_conversation():
