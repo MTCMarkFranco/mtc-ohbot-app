@@ -5,7 +5,7 @@ This is a sample application for the MTC OHBot.
 
 ## Pre-Requesites
 
-**NOTE** You Need both versions of Python intlled to circumvent the antiquated OhBot libraries...
+**NOTE** You Need both versions of Python intlled to circumvent the differences between OhBot libraries and Azure libraries...
 
 [Download python 3.11.0](https://www.python.org/ftp/python/3.11.0/python-3.11.0-amd64.exe)
 
