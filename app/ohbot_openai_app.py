@@ -79,18 +79,18 @@ def speech_to_text():
         return ""
 
 # Define the text-to-speech function
-# def text_to_speech(text):
-#     try:
-#         result = speech_synthesizer.speak_text_async(text).get()
-#         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-#             print("Text-to-speech conversion successful.")
-#             return True
-#         else:
-#             print(f"Error synthesizing audio: {result}")
-#             return False
-#     except Exception as ex:
-#         print(f"Error synthesizing audio: {ex}")
-#         return False
+def text_to_speech(text):
+    try:
+        result = speech_synthesizer.speak_text_async(text).get()
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            print("Text-to-speech conversion successful.")
+            return True
+        else:
+            print(f"Error synthesizing audio: {result}")
+            return False
+    except Exception as ex:
+        print(f"Error synthesizing audio: {ex}")
+        return False
 
 # Define the Azure OpenAI language generation function
 def generate_text(prompt):
@@ -163,7 +163,8 @@ while True:
         print(f"AI said: {response}")
 
         # Convert the response to speech using text-to-speech
-        send_to_ohbot_service(response)
+        #send_to_ohbot_service(response)
+        text_to_speech(response)
         
     else:
         # if there are no questions within 1 minute, start a new conversation 
