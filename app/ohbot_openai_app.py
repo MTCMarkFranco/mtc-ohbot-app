@@ -163,8 +163,8 @@ while True:
         print(f"AI said: {response}")
 
         # Convert the response to speech using text-to-speech
-        #send_to_ohbot_service(response)
-        text_to_speech(response)
+        send_to_ohbot_service(response)
+        #text_to_speech(response)
         
     else:
         # if there are no questions within 1 minute, start a new conversation 
