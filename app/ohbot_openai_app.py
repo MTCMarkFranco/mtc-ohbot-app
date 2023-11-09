@@ -125,7 +125,7 @@ def generate_text(prompt):
    return response['choices'][0]['message']['content']
 
 # Define the text-to-speech function
-def send_to_ohbot_service(text):
+def send_message_to_ohbot_service(text):
     try:
         url = "http://127.0.0.1:8000"
         headers = {"Content-Type": "text/html"}
@@ -136,7 +136,18 @@ def send_to_ohbot_service(text):
         print(f"Error sending to Ohbot service: {ex}")
         return False
     
-
+# Define the text-to-speech function
+def send_gesture_to_ohbot_service(gesture):
+    try:
+        url = "http://127.0.0.1:8000/gesture"
+        headers = {"Content-Type": "text/html"}
+        response = requests.post(url, headers=headers, json=gesture)
+        response.raise_for_status()
+        return True
+    except Exception as ex:
+        print(f"Error sending to Ohbot service: {ex}")
+        return False
+ 
 #  *****************************************************
 #  ************** MAIN PROGRAM FLOW ********************
 #  *****************************************************
@@ -163,7 +174,25 @@ while True:
         print(f"AI said: {response}")
 
         # Convert the response to speech using text-to-speech
-        send_to_ohbot_service(response)
+        # gesture = {
+        #     "gesture": "blink",
+        #     "coordinates": {
+        #         "X": 0,
+        #         "Y": 0
+        #     },
+        #     "velocity": 0.01
+        # }
+        gesture = {
+            "gesture": "lookAt",
+            "coordinates": {
+                "X": -5,
+                "Y": 5
+            },
+            "velocity": 0.01
+        }
+        send_gesture_to_ohbot_service(gesture)
+        send_message_to_ohbot_service(response)
+        
         
     else:
         # if there are no questions within 1 minute, start a new conversation 
