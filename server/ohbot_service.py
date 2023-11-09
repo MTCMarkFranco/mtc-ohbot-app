@@ -33,11 +33,11 @@ def blink(velocity):
         ohbot.move(ohbot.LIDBLINK,x,eye = 0)
         ohbot.wait(velocity)
 
-def lookAt(coordinates, velocity):
-    ohbot.move(ohbot.HEADTURN,coordinates['X'])
-    ohbot.move(ohbot.HEADNOD,coordinates['Y'])
-    ohbot.move(ohbot.EYETURN, pos= coordinates['X'],spd=velocity)
-    ohbot.move(ohbot.EYETILT, pos= coordinates['Y'],spd=velocity)
+def lookAt(HeadCoordinates,EyeCoordinates, velocity):
+    ohbot.move(ohbot.HEADTURN,HeadCoordinates['X'])
+    ohbot.move(ohbot.HEADNOD,HeadCoordinates['Y'])
+    ohbot.move(ohbot.EYETURN, pos= EyeCoordinates['X'],spd=velocity)
+    ohbot.move(ohbot.EYETILT, pos= EyeCoordinates['Y'],spd=velocity)
     
     
         
@@ -76,9 +76,6 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                 content_length = int(self.headers['Content-Length'])
                 body = self.rfile.read(content_length)
                 gesture = json.loads(body.decode('utf-8'))
-                print(f"Gesture: {gesture['gesture']}")
-                print(f"Coordinates: {gesture['coordinates']}")
-                print(f"Velocity: {gesture['velocity']}")
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
@@ -88,7 +85,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                    blink(gesture['velocity'])
                    
                 if gesture['gesture'] == "lookAt":
-                   lookAt(gesture['coordinates'], gesture['velocity'])
+                   lookAt(gesture['head_coordinates'],gesture['head_coordinates'], gesture['velocity'])
                                 
                                 
             except Exception as ex:

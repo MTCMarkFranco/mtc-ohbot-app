@@ -174,19 +174,25 @@ while True:
         print(f"AI said: {response}")
 
         # Convert the response to speech using text-to-speech
+        
+        # TOP RIGHT = Head:X=10,Y=10 EYE=X=10,Y=10
+        # TOP LEFT = Head:X=0,Y=10 EYE=X=0,Y=10
+        # BOTTOM LEFT = Head:X=0,Y=0 EYE=X=0,Y=0
+        # BTTOM RIGHT = Head:X=10,Y=0 EYE=X=10,Y=0
+        
         gestureBlink = {
             "gesture": "blink",
-            "coordinates": {
-                "X": 0,
-                "Y": 0
-            },
             "velocity": 0.01
         }
         gestureLookAt = {
             "gesture": "lookAt",
-            "coordinates": {
-                "X": -5,
-                "Y": 5
+            "head_coordinates": {
+                "X": 0,
+                "Y": 10
+            },
+            "eye_coordinates": {
+                "X": 0,
+                "Y": 10
             },
             "velocity": 0.01
         }
