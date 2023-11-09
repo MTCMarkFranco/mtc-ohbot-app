@@ -174,15 +174,15 @@ while True:
         print(f"AI said: {response}")
 
         # Convert the response to speech using text-to-speech
-        # gesture = {
-        #     "gesture": "blink",
-        #     "coordinates": {
-        #         "X": 0,
-        #         "Y": 0
-        #     },
-        #     "velocity": 0.01
-        # }
-        gesture = {
+        gestureBlink = {
+            "gesture": "blink",
+            "coordinates": {
+                "X": 0,
+                "Y": 0
+            },
+            "velocity": 0.01
+        }
+        gestureLookAt = {
             "gesture": "lookAt",
             "coordinates": {
                 "X": -5,
@@ -190,7 +190,8 @@ while True:
             },
             "velocity": 0.01
         }
-        send_gesture_to_ohbot_service(gesture)
+        send_gesture_to_ohbot_service(gestureBlink)
+        send_gesture_to_ohbot_service(gestureLookAt)
         send_message_to_ohbot_service(response)
         
         
