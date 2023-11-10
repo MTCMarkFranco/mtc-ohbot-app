@@ -1,4 +1,5 @@
 import os
+import random
 import azure.cognitiveservices.speech as speechsdk
 import openai
 from dotenv import load_dotenv
@@ -265,9 +266,9 @@ def is_person_looking_at(captureDevice,detctor,predictor):
 
     # If the person has been looking at the camera for 5 seconds, set the flag
     if look_counter >= 2:
-        return True, 5, 5
+        return True, random.randint(1, 10), random.randint(1, 10)
     else:
-        return False,5,5
+        return False,random.randint(1, 10),random.randint(1, 10)
             
 #  *****************************************************
 #  ************** MAIN PROGRAM FLOW ********************
@@ -282,12 +283,11 @@ captureDevice, detector, predictor = initalize_face_Detection()
 
 while True:
     
-    
+    # Check if there is a person looking at the camera(Ohbot) and get the coordinates of the person's face    
     isLookingAtMe, X,Y = is_person_looking_at(captureDevice, detector, predictor)
-    
-    if isLookingAtMe:
-                
-        gestureLookAt = {
+
+    # Keep head tracking continuously
+    gestureLookAt = {
             "gesture": "lookAt",
             "head_coordinates": {
                 "X": X,
@@ -299,10 +299,12 @@ while True:
             },
             "velocity": 0.01
         }
+    
+    send_gesture_to_ohbot_service(gestureLookAt)
         
-        # keep head tracking during conversation
-        send_gesture_to_ohbot_service(gestureLookAt)
-        
+    # if the person is looking at the camera, conserate, new or existing....  
+    if isLookingAtMe:
+                 
         # If i am in a converation do not say hi and just continue conversation...
         if len(messages) == 1:
             print('New Conversation, Saying Hi!')
