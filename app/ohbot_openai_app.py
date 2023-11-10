@@ -4,11 +4,17 @@ import openai
 from dotenv import load_dotenv
 import time
 import requests
+import cv2
+import dlib
+import math
 
 load_dotenv(dotenv_path=".\\ENV\\local.env")
 
 # Globals
 messages = []
+engageWithPerson = False
+look_counter = 0
+start_time = None
 
 # Set up OpenAI API credentials
 openai.api_type = "azure"
@@ -78,20 +84,6 @@ def speech_to_text():
     elif result.reason == speechsdk.ResultReason.Canceled:
         return ""
 
-# Define the text-to-speech function
-# def text_to_speech(text):
-#     try:
-#         result = speech_synthesizer.speak_text_async(text).get()
-#         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-#             print("Text-to-speech conversion successful.")
-#             return True
-#         else:
-#             print(f"Error synthesizing audio: {result}")
-#             return False
-#     except Exception as ex:
-#         print(f"Error synthesizing audio: {ex}")
-#         return False
-
 # Define the Azure OpenAI language generation function
 def generate_text(prompt):
    
@@ -148,23 +140,15 @@ def send_gesture_to_ohbot_service(gesture):
         print(f"Error sending to Ohbot service: {ex}")
         return False
  
-#  *****************************************************
-#  ************** MAIN PROGRAM FLOW ********************
-#  *****************************************************
-
-# Initialize the start time
-start_time = None
-
-# Initialize a new conversation
-start_new_conversation()
-
-# Main program loop
-while True:
+def interact():
+    
+    #global start_time
+    
     # Get input from user using speech-to-text
     user_input = speech_to_text()
     
     if user_input != "":
-        start_time =  None
+        #start_time =  None
         print(f"You said: {user_input}")
 
         # Generate a response using OpenAI
@@ -174,42 +158,162 @@ while True:
         print(f"AI said: {response}")
 
         # Convert the response to speech using text-to-speech
-        
-        # TOP RIGHT = Head:X=10,Y=10 EYE=X=10,Y=10
-        # TOP LEFT = Head:X=0,Y=10 EYE=X=0,Y=10
-        # BOTTOM LEFT = Head:X=0,Y=0 EYE=X=0,Y=0
-        # BTTOM RIGHT = Head:X=10,Y=0 EYE=X=10,Y=0
-        
+          
         gestureBlink = {
             "gesture": "blink",
             "velocity": 0.01
         }
-        gestureLookAt = {
-            "gesture": "lookAt",
-            "head_coordinates": {
-                "X": 0,
-                "Y": 10
-            },
-            "eye_coordinates": {
-                "X": 0,
-                "Y": 10
-            },
-            "velocity": 0.01
-        }
+        
         send_gesture_to_ohbot_service(gestureBlink)
-        send_gesture_to_ohbot_service(gestureLookAt)
         send_message_to_ohbot_service(response)
         
         
-    else:
-        # if there are no questions within 1 minute, start a new conversation 
-        if start_time is None:
-            start_time = time.time()
-            print("Starting timer")    
+    # else:
+    #     # if there are no questions within 20 seconds, start a new conversation 
+    #     if start_time is None:
+    #         start_time = time.time()
+    #         print("Starting timer")    
         
-        if time.time() - start_time >= 20:
-            start_new_conversation()
-            start_time = time.time()
+    #     if time.time() - start_time >= 20:
+    #         start_new_conversation()
+    #         start_time = time.time()
             
         time.sleep(1)
+
+def eye_aspect_ratio(eye):
+    # compute the euclidean distances between the two sets of
+    # vertical eye landmarks (x, y)-coordinates
+    A = math.dist(eye[1], eye[5])
+    B = math.dist(eye[2], eye[4])
+
+    # compute the euclidean distance between the horizontal
+    # eye landmark (x, y)-coordinates
+    C = math.dist(eye[0], eye[3])
+
+    # compute the eye aspect ratio
+    ear = (A + B) / (2.0 * C)
+
+    # return the eye aspect ratio
+    return ear
+
+def initalize_face_Detection():
+    
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor("recognition_models\\shape_predictor_68_face_landmarks.dat")
+    captureDevice = cv2.VideoCapture(0)   
+    
+    return captureDevice, detector, predictor
+
+def is_person_looking_at(captureDevice,detctor,predictor):
+    
+    global look_counter
+    EYE_AR_THRESH = 0.15
         
+    # Capture frame-by-frame
+    ret, frame = captureDevice.read()
+
+    # Convert the image to gray scale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Perform face detection
+    faces = detctor(gray, 0)
+    
+    if len(faces) == 0:
+        engageWithPerson = False
+        look_counter = 0
+    else:
+        # Loop over the face detections
+        for face in faces:
+            # Determine the facial landmarks for the face region
+            x1 = face.left()  # left point
+            y1 = face.top()  # top point
+            x2 = face.right()  # right point
+            y2 = face.bottom()  # bottom point
+
+            # Create landmark object
+            landmarks = predictor(image=gray, box=face)
+            
+            # Initialize lists to hold eye coordinates
+            left_eye = []
+            right_eye = []
+
+            # Loop through all the points
+            for n in range(36, 42):  # Loop for left eye
+                x = landmarks.part(n).x
+                y = landmarks.part(n).y
+                left_eye.append((x, y))
+
+            for n in range(42, 48):  # Loop for right eye
+                x = landmarks.part(n).x
+                y = landmarks.part(n).y
+                right_eye.append((x, y))
+
+            # Calculate the Eye Aspect Ratio for both eyes
+            leftEAR = eye_aspect_ratio(left_eye)
+            rightEAR = eye_aspect_ratio(right_eye)
+
+            # Average the eye aspect ratio together for both eyes
+            ear = (leftEAR + rightEAR) / 2.0
+
+            # If the eye aspect ratio is below a certain threshold, consider that the eyes are closed
+            if ear < EYE_AR_THRESH:
+                #print('The person is not looking at the camera')
+                look_counter = 0
+            else:
+                #print('The person is looking at the camera')
+                look_counter += 1
+
+    # If the person has been looking at the camera for 5 seconds, set the flag
+    if look_counter >= 2:
+        return True, 5, 5
+    else:
+        return False,5,5
+            
+#  *****************************************************
+#  ************** MAIN PROGRAM FLOW ********************
+#  *****************************************************
+
+
+# Initialize a new conversation
+start_new_conversation()
+
+# Initialize Cature device, face detector and facial landmark predictor
+captureDevice, detector, predictor = initalize_face_Detection()
+
+while True:
+    
+    
+    isLookingAtMe, X,Y = is_person_looking_at(captureDevice, detector, predictor)
+    
+    if isLookingAtMe:
+                
+        gestureLookAt = {
+            "gesture": "lookAt",
+            "head_coordinates": {
+                "X": X,
+                "Y": Y
+            },
+            "eye_coordinates": {
+                "X": 5,
+                "Y": 5
+            },
+            "velocity": 0.01
+        }
+        
+        # keep head tracking during conversation
+        send_gesture_to_ohbot_service(gestureLookAt)
+        
+        # If i am in a converation do not say hi and just continue conversation...
+        if len(messages) == 1:
+            print('New Conversation, Saying Hi!')
+            send_message_to_ohbot_service("Hi there,  I am Art Vandelay, what is your name?")
+        else:
+            print('Conversation in Flight...')
+        interact()
+                
+        
+    else:
+        print('Wipe out previous conversation, and voice to text will continue the next time someone looks at the ohbot(camera)')
+        start_new_conversation()
+        
+    time.sleep(0.5)

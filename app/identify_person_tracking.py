@@ -6,10 +6,6 @@ import time
 # Globals
 engageWithPerson = False
 look_counter = 0
-start_time = time.time()
-
-# Initialize video capture
-cap = cv2.VideoCapture(0)
 
 # Functions
 def eye_aspect_ratio(eye):
@@ -28,20 +24,27 @@ def eye_aspect_ratio(eye):
     # return the eye aspect ratio
     return ear
 
-# Initialize dlib's face detector and create a predictor
-EYE_AR_THRESH = 0.18
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("recognition_models\\shape_predictor_68_face_landmarks.dat")
+def initalize_face_Detection():
+    
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor("recognition_models\\shape_predictor_68_face_landmarks.dat")
+    captureDevice = cv2.VideoCapture(0)   
+    
+    return captureDevice, detector, predictor
 
-while True:
+def is_person_looking_at(captureDevice,detctor,predictor):
+    
+    global look_counter
+    EYE_AR_THRESH = 0.15
+        
     # Capture frame-by-frame
-    ret, frame = cap.read()
+    ret, frame = captureDevice.read()
 
     # Convert the image to gray scale
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Perform face detection
-    faces = detector(gray, 0)
+    faces = detctor(gray, 0)
     
     if len(faces) == 0:
         engageWithPerson = False
@@ -90,15 +93,16 @@ while True:
 
         # If the person has been looking at the camera for 5 seconds, set the flag
         if look_counter >= 2:
-            engageWithPerson = True
+            return True
         else:
-            engageWithPerson = False
+            return False
 
-    # Break the loop on 'q' key press
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+# MAIN FUNCTION ********************************************
+captureDevice, detector, predictor = initalize_face_Detection()
     
-    if engageWithPerson:
+while True:
+    
+    if is_person_looking_at(captureDevice, detector, predictor):
         print('Say hello Ohbot!')
     else:
         print('Shutdown microsophone and stop listening')
@@ -106,5 +110,5 @@ while True:
     time.sleep(0.5)
     
 # When everything done, release the capture
-cap.release()
-cv2.destroyAllWindows()
+# cap.release()
+# cv2.destroyAllWindows()
