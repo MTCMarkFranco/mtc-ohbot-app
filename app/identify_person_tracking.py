@@ -4,10 +4,6 @@ from msrest.authentication import CognitiveServicesCredentials
 import dlib
 import math
 
-# Initialize Azure client
-#credentials = CognitiveServicesCredentials('<your_azure_key>')
-#client = ComputerVisionClient('<your_azure_endpoint>', credentials)
-
 # Initialize video capture
 cap = cv2.VideoCapture(0)
 
