@@ -1,12 +1,10 @@
 import cv2
-from azure.cognitiveservices.vision.computervision import ComputerVisionClient
-from msrest.authentication import CognitiveServicesCredentials
 import dlib
 import math
 import time
 
 # Globals
-really_looking_at_camera = False
+engageWithPerson = False
 look_counter = 0
 start_time = time.time()
 
@@ -46,7 +44,7 @@ while True:
     faces = detector(gray, 0)
     
     if len(faces) == 0:
-        really_looking_at_camera = False
+        engageWithPerson = False
         look_counter = 0
 
     # Loop over the face detections
@@ -92,18 +90,18 @@ while True:
 
         # If the person has been looking at the camera for 5 seconds, set the flag
         if look_counter >= 2:
-            really_looking_at_camera = True
+            engageWithPerson = True
         else:
-            really_looking_at_camera = False
+            engageWithPerson = False
 
     # Break the loop on 'q' key press
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     
-    if really_looking_at_camera:
-        print('The person is really looking at the camera!!!')
+    if engageWithPerson:
+        print('Say hello Ohbot!')
     else:
-        print('No one looking at me...')
+        print('Shutdown microsophone and stop listening')
         
     time.sleep(0.5)
     
