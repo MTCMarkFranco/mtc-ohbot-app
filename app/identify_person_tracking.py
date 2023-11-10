@@ -3,6 +3,12 @@ from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from msrest.authentication import CognitiveServicesCredentials
 import dlib
 import math
+import time
+
+# Globals
+really_looking_at_camera = False
+look_counter = 0
+start_time = time.time()
 
 # Initialize video capture
 cap = cv2.VideoCapture(0)
@@ -24,9 +30,8 @@ def eye_aspect_ratio(eye):
     # return the eye aspect ratio
     return ear
 
-
 # Initialize dlib's face detector and create a predictor
-EYE_AR_THRESH = 0.3
+EYE_AR_THRESH = 0.18
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("recognition_models\\shape_predictor_68_face_landmarks.dat")
 
@@ -39,6 +44,10 @@ while True:
 
     # Perform face detection
     faces = detector(gray, 0)
+    
+    if len(faces) == 0:
+        really_looking_at_camera = False
+        look_counter = 0
 
     # Loop over the face detections
     for face in faces:
@@ -75,14 +84,29 @@ while True:
 
         # If the eye aspect ratio is below a certain threshold, consider that the eyes are closed
         if ear < EYE_AR_THRESH:
-            print('The person is not looking at the camera')
+            #print('The person is not looking at the camera')
+            look_counter = 0
         else:
-            print('The person is looking at the camera')
+            #print('The person is looking at the camera')
+            look_counter += 1
+
+        # If the person has been looking at the camera for 5 seconds, set the flag
+        if look_counter >= 2:
+            really_looking_at_camera = True
+        else:
+            really_looking_at_camera = False
 
     # Break the loop on 'q' key press
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
+    
+    if really_looking_at_camera:
+        print('The person is really looking at the camera!!!')
+    else:
+        print('No one looking at me...')
+        
+    time.sleep(0.5)
+    
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
