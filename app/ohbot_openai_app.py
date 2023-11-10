@@ -209,6 +209,8 @@ def is_person_looking_at(captureDevice,detctor,predictor):
     
     global look_counter
     EYE_AR_THRESH = 0.15
+    X = 5
+    Y = 5
         
     # Capture frame-by-frame
     ret, frame = captureDevice.read()
@@ -230,6 +232,10 @@ def is_person_looking_at(captureDevice,detctor,predictor):
             y1 = face.top()  # top point
             x2 = face.right()  # right point
             y2 = face.bottom()  # bottom point
+            
+            # Calculate the center of the face and normalize the coordinatesfor Ohbot
+            X = round(100 - (int((x1 + x2) / 2) * 100) / 640) / 100
+            Y = round(100 - (int((y1 + y2) / 2) * 100) / 480) / 100
 
             # Create landmark object
             landmarks = predictor(image=gray, box=face)
@@ -266,10 +272,13 @@ def is_person_looking_at(captureDevice,detctor,predictor):
 
     # If the person has been looking at the camera for 5 seconds, set the flag
     if look_counter >= 2:
-        return True, random.randint(1, 10), random.randint(1, 10)
+        return True, X, Y
     else:
-        return False,random.randint(1, 10),random.randint(1, 10)
-            
+        return False, X, Y
+
+def buffer_to_five(num):
+    return 5 - abs(5 - num)
+           
 #  *****************************************************
 #  ************** MAIN PROGRAM FLOW ********************
 #  *****************************************************
@@ -286,36 +295,34 @@ while True:
     # Check if there is a person looking at the camera(Ohbot) and get the coordinates of the person's face    
     isLookingAtMe, X,Y = is_person_looking_at(captureDevice, detector, predictor)
 
-    # Keep head tracking continuously
+    # fill head tracking object
     gestureLookAt = {
             "gesture": "lookAt",
             "head_coordinates": {
-                "X": X,
-                "Y": Y
+                "X": X * 10,
+                "Y": Y * 10
             },
             "eye_coordinates": {
-                "X": 5,
-                "Y": 5
+                "X": X * 20,
+                "Y": Y * 20
             },
             "velocity": 0.01
         }
-    
-    send_gesture_to_ohbot_service(gestureLookAt)
-        
-    # if the person is looking at the camera, conserate, new or existing....  
+           
+    # if the person is looking at the camera, conversate, new or existing....  
     if isLookingAtMe:
                  
         # If i am in a converation do not say hi and just continue conversation...
         if len(messages) == 1:
-            print('New Conversation, Saying Hi!')
-            send_message_to_ohbot_service("Hi there,  I am Art Vandelay, what is your name?")
+            print('New Conversation, Ohbot Saying Hi!')
+            send_message_to_ohbot_service("what is your name?")
         else:
-            print('Conversation in Flight...')
-        interact()
-                
+            print('Continuing existing coversation...')
+        send_gesture_to_ohbot_service(gestureLookAt)
+        interact()      
         
     else:
         print('Wipe out previous conversation, and voice to text will continue the next time someone looks at the ohbot(camera)')
         start_new_conversation()
         
-    time.sleep(0.5)
+    time.sleep(1)
