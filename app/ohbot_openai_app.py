@@ -353,6 +353,6 @@ while True:
         
         # remove backgound conversations if no one is actually talking to the Ohbot
         mute_microphone()
-        print('The person is not looking at the camera')
+        print('No one looking at the Ohbot')
             
     time.sleep(0.3)
