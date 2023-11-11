@@ -8,6 +8,7 @@ import requests
 import cv2
 import dlib
 import math
+import threading
 
 load_dotenv(dotenv_path=".\\ENV\\local.env")
 
@@ -143,43 +144,49 @@ def send_gesture_to_ohbot_service(gesture):
  
 def interact():
     
-    #global start_time
-    
-    # Get input from user using speech-to-text
-    user_input = speech_to_text()
-    
-    if user_input != "":
-        #start_time =  None
-        print(f"You said: {user_input}")
+    while True:
+        global start_time
+        user_input = ""
+        
+        # If I am in a conversation do not say hi and just continue conversation...
+        if len(messages) == 1:
+            print('New Conversation, Ohbot Saying Hi!')
+            user_input = "Introduce yourself and ask me for my name."
+        else:
+            print('Continuing existing conversation...')
+            # Get input from user using speech-to-text
+            user_input = speech_to_text()
+        
+        if user_input != "":
+            print(f"You said: {user_input}")
 
-        # Generate a response using OpenAI
-        prompt = f"Q: {user_input}\nA:"
-        response = generate_text(prompt)
-        #response = user_input
-        print(f"AI said: {response}")
+            # Generate a response using OpenAI
+            prompt = f"Q: {user_input}\nA:"
+            response = generate_text(prompt)
+            print(f"AI said: {response}")
 
-        # Convert the response to speech using text-to-speech
-          
-        gestureBlink = {
-            "gesture": "blink",
-            "velocity": 0.01
-        }
-        
-        send_gesture_to_ohbot_service(gestureBlink)
-        send_message_to_ohbot_service(response)
-        
-        
-    # else:
-    #     # if there are no questions within 20 seconds, start a new conversation 
-    #     if start_time is None:
-    #         start_time = time.time()
-    #         print("Starting timer")    
-        
-    #     if time.time() - start_time >= 20:
-    #         start_new_conversation()
-    #         start_time = time.time()
+            # Convert the response to speech using text-to-speech
             
-        time.sleep(1)
+            gestureBlink = {
+                "gesture": "blink",
+                "velocity": 0.01
+            }
+            
+            send_gesture_to_ohbot_service(gestureBlink)
+            send_message_to_ohbot_service(response)
+            
+            
+        else:
+            # if there is no interaction for 20 seconds start a new conversation
+            if start_time is None:
+                start_time = time.time()
+                print("Starting timer")    
+            
+            if time.time() - start_time >= 20:
+                start_new_conversation()
+                start_time = time.time()
+                
+            time.sleep(1)
 
 def eye_aspect_ratio(eye):
     # compute the euclidean distances between the two sets of
@@ -299,16 +306,15 @@ while True:
               
     # if the person is looking at the camera, conversate, new or existing....  
     if isLookingAtMe:
-                 
-        # If i am in a converation do not say hi and just continue conversation...
-        # if len(messages) == 1:
-        #     print('New Conversation, Ohbot Saying Hi!')
-        #     send_message_to_ohbot_service("what is your name?")
-        # else:
-        #     print('Continuing existing coversation...')
-        
+                
         print('The person is looking at the camera')
-        #interact()   
+        # Check if the thread is defined and if it's still running
+        if 'interact_thread' in locals() and interact_thread.is_alive():
+            print('Interact thread is still running...')
+        else:
+            print('Starting a new interact thread...')
+            interact_thread = threading.Thread(target=interact)
+            interact_thread.start() 
         # fill head tracking object
         gestureLookAt = {
             "gesture": "lookAt",
@@ -326,9 +332,5 @@ while True:
         
     else:
         print('The person is not looking at the camera')
-        #start_new_conversation()
-        #reset X,Y
-        X = 0.5
-        Y = 0.5
             
     time.sleep(0.3)
