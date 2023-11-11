@@ -9,6 +9,10 @@ import cv2
 import dlib
 import math
 import threading
+from ctypes import cast, POINTER
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+
 
 load_dotenv(dotenv_path=".\\ENV\\local.env")
 
@@ -185,7 +189,8 @@ def interact():
             if time.time() - start_time >= 20:
                 start_new_conversation()
                 start_time = time.time()
-                
+            
+            print("new conversion in: " + str(20 - (time.time() - start_time)))    
             time.sleep(1)
 
 def eye_aspect_ratio(eye):
@@ -283,9 +288,21 @@ def is_person_looking_at(captureDevice,detctor,predictor):
     else:
         return False, X, Y
 
-def buffer_to_five(num):
-    return 5 - abs(5 - num)
-           
+def mute_microphone():
+    devices = AudioUtilities.GetMicrophone()
+    interface = devices.Activate(
+        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    volume = cast(interface, POINTER(IAudioEndpointVolume))
+    volume.SetMute(1, None)
+
+def unmute_microphone():
+    devices = AudioUtilities.GetMicrophone()
+    interface = devices.Activate(
+        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    volume = cast(interface, POINTER(IAudioEndpointVolume))
+    volume.SetMute(0, None)
+    
+              
 #  *****************************************************
 #  ************** MAIN PROGRAM FLOW ********************
 #  *****************************************************
@@ -308,12 +325,14 @@ while True:
     if isLookingAtMe:
                 
         print('The person is looking at the camera')
+        
+        # enable the microphone
+        unmute_microphone()
+        
         # Check if the thread is defined and if it's still running
-        if 'interact_thread' in locals() and interact_thread.is_alive():
-            print('Interact thread is still running...')
-        else:
+        if not ('interact_thread' in locals() and interact_thread.is_alive()):
             print('Starting a new interact thread...')
-            interact_thread = threading.Thread(target=interact)
+            interact_thread = threading.Thread(target=interact, daemon=True)
             interact_thread.start() 
         # fill head tracking object
         gestureLookAt = {
@@ -331,6 +350,9 @@ while True:
         send_gesture_to_ohbot_service(gestureLookAt)   
         
     else:
+        
+        # remove backgound conversations if no one is actually talking to the Ohbot
+        mute_microphone()
         print('The person is not looking at the camera')
             
     time.sleep(0.3)
