@@ -24,6 +24,14 @@ else:
     ohbot.setVoice("-a100 -r0 -vZira")
     ohbot.wait(1)
 
+def narrow_range(num, min=0, max=10):
+    if num <= max /2 - 1:
+        return max /2 - 0.16
+    elif num >= max /2 + 1:
+        return max /2 + 0.16
+    else:
+        return max /2
+    
 def blink(velocity):
     for x in range(10,0,-1):
         ohbot.move(ohbot.LIDBLINK,x,eye = 0)
@@ -34,8 +42,8 @@ def blink(velocity):
         ohbot.wait(velocity)
 
 def lookAt(HeadCoordinates,EyeCoordinates, velocity):
-    ohbot.move(ohbot.HEADTURN,HeadCoordinates['X'] * 10)
-    ohbot.move(ohbot.HEADNOD,HeadCoordinates['Y'] * 10)
+    ohbot.move(ohbot.HEADTURN,narrow_range(HeadCoordinates['X'] * 10))
+    ohbot.move(ohbot.HEADNOD,narrow_range(HeadCoordinates['Y'] * 10))
     ohbot.move(ohbot.EYETURN, pos= EyeCoordinates['X'] * 10,spd=velocity)
     ohbot.move(ohbot.EYETILT, pos= EyeCoordinates['Y'] * 10,spd=velocity)
     
