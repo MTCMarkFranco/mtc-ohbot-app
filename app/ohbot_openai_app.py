@@ -292,37 +292,43 @@ captureDevice, detector, predictor = initalize_face_Detection()
 
 while True:
     
+     
     # Check if there is a person looking at the camera(Ohbot) and get the coordinates of the person's face    
     isLookingAtMe, X,Y = is_person_looking_at(captureDevice, detector, predictor)
 
-    # fill head tracking object
-    gestureLookAt = {
-            "gesture": "lookAt",
-            "head_coordinates": {
-                "X": X * 10,
-                "Y": Y * 10
-            },
-            "eye_coordinates": {
-                "X": X * 20,
-                "Y": Y * 20
-            },
-            "velocity": 0.01
-        }
-           
+              
     # if the person is looking at the camera, conversate, new or existing....  
     if isLookingAtMe:
                  
         # If i am in a converation do not say hi and just continue conversation...
-        if len(messages) == 1:
-            print('New Conversation, Ohbot Saying Hi!')
-            send_message_to_ohbot_service("what is your name?")
-        else:
-            print('Continuing existing coversation...')
-        send_gesture_to_ohbot_service(gestureLookAt)
-        interact()      
+        # if len(messages) == 1:
+        #     print('New Conversation, Ohbot Saying Hi!')
+        #     send_message_to_ohbot_service("what is your name?")
+        # else:
+        #     print('Continuing existing coversation...')
+        
+        print('The person is looking at the camera')
+        #interact()   
+        # fill head tracking object
+        gestureLookAt = {
+            "gesture": "lookAt",
+            "head_coordinates": {
+                "X": X ,
+                "Y": Y 
+            },
+            "eye_coordinates": {
+                "X": X ,
+                "Y": Y
+            },
+            "velocity": 0.01
+        }
+        send_gesture_to_ohbot_service(gestureLookAt)   
         
     else:
-        print('Wipe out previous conversation, and voice to text will continue the next time someone looks at the ohbot(camera)')
-        start_new_conversation()
-        
-    time.sleep(1)
+        print('The person is not looking at the camera')
+        #start_new_conversation()
+        #reset X,Y
+        X = 0.5
+        Y = 0.5
+            
+    time.sleep(0.3)

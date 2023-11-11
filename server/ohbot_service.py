@@ -34,10 +34,10 @@ def blink(velocity):
         ohbot.wait(velocity)
 
 def lookAt(HeadCoordinates,EyeCoordinates, velocity):
-    ohbot.move(ohbot.HEADTURN,HeadCoordinates['X'])
-    ohbot.move(ohbot.HEADNOD,HeadCoordinates['Y'])
-    ohbot.move(ohbot.EYETURN, pos= EyeCoordinates['X'],spd=velocity)
-    ohbot.move(ohbot.EYETILT, pos= EyeCoordinates['Y'],spd=velocity)
+    ohbot.move(ohbot.HEADTURN,HeadCoordinates['X'] * 10)
+    ohbot.move(ohbot.HEADNOD,HeadCoordinates['Y'] * 10)
+    ohbot.move(ohbot.EYETURN, pos= EyeCoordinates['X'] * 10,spd=velocity)
+    ohbot.move(ohbot.EYETILT, pos= EyeCoordinates['Y'] * 10,spd=velocity)
     
     
         
@@ -85,7 +85,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                    blink(gesture['velocity'])
                    
                 if gesture['gesture'] == "lookAt":
-                   lookAt(gesture['head_coordinates'],gesture['head_coordinates'], gesture['velocity'])
+                   lookAt(gesture['head_coordinates'],gesture['eye_coordinates'], gesture['velocity'])
                                 
                                 
             except Exception as ex:
