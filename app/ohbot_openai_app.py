@@ -19,7 +19,7 @@ load_dotenv(dotenv_path=".\\ENV\\local.env")
 # Globals
 messages = []
 engageWithPerson = False
-look_counter = 0
+person_looking_at_history = []
 start_time = None
 
 # Set up OpenAI API credentials
@@ -154,10 +154,10 @@ def interact():
         
         # If I am in a conversation do not say hi and just continue conversation...
         if len(messages) == 1:
-            print('New Conversation, Ohbot Saying Hi!')
+            #print('New Conversation, Ohbot Saying Hi!')
             user_input = "Introduce yourself and ask me for my name."
         else:
-            print('Continuing existing conversation...')
+            #print('Continuing existing conversation...')
             # Get input from user using speech-to-text
             user_input = speech_to_text()
         
@@ -219,7 +219,8 @@ def initalize_face_Detection():
 
 def is_person_looking_at(captureDevice,detctor,predictor):
     
-    global look_counter
+    global person_looking_at_history
+    lookingAtCamera = False
     EYE_AR_THRESH = 0.15
     X = 5
     Y = 5
@@ -233,61 +234,63 @@ def is_person_looking_at(captureDevice,detctor,predictor):
     # Perform face detection
     faces = detctor(gray, 0)
     
-    if len(faces) == 0:
-        engageWithPerson = False
-        look_counter = 0
+    if len(faces) > 0:
+        # Determine the facial landmarks for the face region
+        x1 = faces[0].left()  # left point
+        y1 = faces[0].top()  # top point
+        x2 = faces[0].right()  # right point
+        y2 = faces[0].bottom()  # bottom point
+        
+        # Calculate the center of the face and normalize the coordinatesfor Ohbot
+        X = round(100 - (int((x1 + x2) / 2) * 100) / 640) / 100
+        Y = round(100 - (int((y1 + y2) / 2) * 100) / 480) / 100
+
+        # Create landmark object
+        landmarks = predictor(image=gray, box=faces[0])
+        
+        # Initialize lists to hold eye coordinates
+        left_eye = []
+        right_eye = []
+
+        # Loop through all the points
+        for n in range(36, 42):  # Loop for left eye
+            x = landmarks.part(n).x
+            y = landmarks.part(n).y
+            left_eye.append((x, y))
+
+        for n in range(42, 48):  # Loop for right eye
+            x = landmarks.part(n).x
+            y = landmarks.part(n).y
+            right_eye.append((x, y))
+
+        # Calculate the Eye Aspect Ratio for both eyes
+        leftEAR = eye_aspect_ratio(left_eye)
+        rightEAR = eye_aspect_ratio(right_eye)
+
+        # Average the eye aspect ratio together for both eyes
+        ear = (leftEAR + rightEAR) / 2.0
+                 
+        if ear >= EYE_AR_THRESH:
+            lookingAtCamera = True
+        else:
+            lookingAtCamera = False
     else:
-        # Loop over the face detections
-        for face in faces:
-            # Determine the facial landmarks for the face region
-            x1 = face.left()  # left point
-            y1 = face.top()  # top point
-            x2 = face.right()  # right point
-            y2 = face.bottom()  # bottom point
-            
-            # Calculate the center of the face and normalize the coordinatesfor Ohbot
-            X = round(100 - (int((x1 + x2) / 2) * 100) / 640) / 100
-            Y = round(100 - (int((y1 + y2) / 2) * 100) / 480) / 100
-
-            # Create landmark object
-            landmarks = predictor(image=gray, box=face)
-            
-            # Initialize lists to hold eye coordinates
-            left_eye = []
-            right_eye = []
-
-            # Loop through all the points
-            for n in range(36, 42):  # Loop for left eye
-                x = landmarks.part(n).x
-                y = landmarks.part(n).y
-                left_eye.append((x, y))
-
-            for n in range(42, 48):  # Loop for right eye
-                x = landmarks.part(n).x
-                y = landmarks.part(n).y
-                right_eye.append((x, y))
-
-            # Calculate the Eye Aspect Ratio for both eyes
-            leftEAR = eye_aspect_ratio(left_eye)
-            rightEAR = eye_aspect_ratio(right_eye)
-
-            # Average the eye aspect ratio together for both eyes
-            ear = (leftEAR + rightEAR) / 2.0
-
-            # If the eye aspect ratio is below a certain threshold, consider that the eyes are closed
-            if ear < EYE_AR_THRESH:
-                #print('The person is not looking at the camera')
-                look_counter = 0
-            else:
-                #print('The person is looking at the camera')
-                look_counter += 1
-
-    # If the person has been looking at the camera for 5 seconds, set the flag
-    if look_counter >= 2:
+        lookingAtCamera = False
+    
+    # Logic here to determine if the person is looking at the Ohbot
+    if lookingAtCamera:
+        person_looking_at_history.clear()
         return True, X, Y
     else:
-        return False, X, Y
-
+        person_looking_at_history.append(False)
+        # if the person has not been looking at the Ohbot for the last 10 cycles, return false
+        # if they intermittentanly look away, continue the conversation
+        if len(person_looking_at_history)== 30 and all(value == False for value in person_looking_at_history[-30:]):
+            print('no person present for last 10 cycles')
+            return False, X, Y  
+        else:
+            return True, X, Y
+    
 def mute_microphone():
     devices = AudioUtilities.GetMicrophone()
     interface = devices.Activate(
@@ -324,7 +327,7 @@ while True:
     # if the person is looking at the camera, conversate, new or existing....  
     if isLookingAtMe:
                 
-        print('The person is looking at the camera')
+        #print('The person is looking at the camera')
         
         # enable the microphone
         unmute_microphone()
@@ -353,6 +356,6 @@ while True:
         
         # remove backgound conversations if no one is actually talking to the Ohbot
         mute_microphone()
-        print('No one looking at the Ohbot')
+        #print('No one looking at the Ohbot')
             
     time.sleep(0.3)
