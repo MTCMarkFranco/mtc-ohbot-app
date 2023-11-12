@@ -12,6 +12,8 @@ import threading
 from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+from datetime import datetime
+import pygame.mixer
 
 
 load_dotenv(dotenv_path=".\\ENV\\local.env")
@@ -152,6 +154,11 @@ def interact():
         global start_time
         user_input = ""
         
+        if engageWithPerson == False:
+            #print('No one looking at the Ohbot')
+            time.sleep(1)
+            continue
+        
         # If I am in a conversation do not say hi and just continue conversation...
         if len(messages) == 1:
             #print('New Conversation, Ohbot Saying Hi!')
@@ -159,6 +166,7 @@ def interact():
         else:
             #print('Continuing existing conversation...')
             # Get input from user using speech-to-text
+            pygame.mixer.Sound('app\\Ding.mp3').play()
             user_input = speech_to_text()
         
         if user_input != "":
@@ -279,17 +287,18 @@ def is_person_looking_at(captureDevice,detctor,predictor):
     
     # Logic here to determine if the person is looking at the Ohbot
     if lookingAtCamera:
-        person_looking_at_history.clear()
+        #person_looking_at_history.clear()
+
         return True, X, Y
     else:
-        person_looking_at_history.append(False)
-        # if the person has not been looking at the Ohbot for the last 10 cycles, return false
-        # if they intermittentanly look away, continue the conversation
-        if len(person_looking_at_history)== 30 and all(value == False for value in person_looking_at_history[-30:]):
-            print('no person present for last 10 cycles')
-            return False, X, Y  
-        else:
-            return True, X, Y
+        # person_looking_at_history.append({'isLookingAtCamera': False, 'TimeStamp': datetime.now()})
+        # # if the person has not been looking at the Ohbot for the last 10 cycles, return false
+        # # if they intermittentanly look away, continue the conversation
+        # if len(person_looking_at_history) == 30 and all(value == False for value in person_looking_at_history[-30:]):
+        #     print('no person present for last 10 cycles')
+        return False, X, Y  
+        # else:
+        #     return True, X, Y
     
 def mute_microphone():
     devices = AudioUtilities.GetMicrophone()
@@ -319,6 +328,8 @@ captureDevice, detector, predictor = initalize_face_Detection()
 
 while True:
     
+    # initialize sound
+    pygame.mixer.init()
      
     # Check if there is a person looking at the camera(Ohbot) and get the coordinates of the person's face    
     isLookingAtMe, X,Y = is_person_looking_at(captureDevice, detector, predictor)
@@ -331,6 +342,7 @@ while True:
         
         # enable the microphone
         unmute_microphone()
+        engageWithPerson = True
         
         # Check if the thread is defined and if it's still running
         if not ('interact_thread' in locals() and interact_thread.is_alive()):
@@ -355,6 +367,7 @@ while True:
     else:
         
         # remove backgound conversations if no one is actually talking to the Ohbot
+        engageWithPerson = False
         mute_microphone()
         #print('No one looking at the Ohbot')
             
