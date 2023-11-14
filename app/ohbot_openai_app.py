@@ -1,5 +1,4 @@
 import os
-import random
 import azure.cognitiveservices.speech as speechsdk
 import openai
 from dotenv import load_dotenv
@@ -12,9 +11,7 @@ import threading
 from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-from datetime import datetime
-import pygame.mixer
-
+import gc
 
 load_dotenv(dotenv_path=".\\ENV\\local.env")
 
@@ -23,6 +20,9 @@ messages = []
 engageWithPerson = False
 person_looking_at_history = []
 start_time = None
+captureDevice = None
+detector = None
+predictor = None
 
 # Set up OpenAI API credentials
 openai.api_type = "azure"
@@ -50,6 +50,8 @@ def start_new_conversation():
     global messages
      
     messages.clear()
+    gc.collect()
+    
     # setup the messages and system prompt List defaults
     Instruction =   "You are a friendly person, looking to have friendly dialogue with whoever you speak with. " \
                     "You will answer questionsand ask questions. " \
@@ -165,8 +167,6 @@ def interact():
             user_input = "Introduce yourself and ask me for my name."
         else:
             #print('Continuing existing conversation...')
-            # Get input from user using speech-to-text
-            pygame.mixer.Sound('app\\Ding.mp3').play()
             user_input = speech_to_text()
         
         if user_input != "":
@@ -219,15 +219,21 @@ def eye_aspect_ratio(eye):
 
 def initalize_face_Detection():
     
+    global captureDevice, detector, predictor
+    
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor("recognition_models\\shape_predictor_68_face_landmarks.dat")
     captureDevice = cv2.VideoCapture(0)   
     
-    return captureDevice, detector, predictor
+    return
 
-def is_person_looking_at(captureDevice,detctor,predictor):
+def is_person_looking_at():
     
+    global captureDevice
+    global detctor
+    global predictor
     global person_looking_at_history
+    
     lookingAtCamera = False
     EYE_AR_THRESH = 0.15
     X = 5
@@ -240,7 +246,7 @@ def is_person_looking_at(captureDevice,detctor,predictor):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Perform face detection
-    faces = detctor(gray, 0)
+    faces = detector(gray, 0)
     
     if len(faces) > 0:
         # Determine the facial landmarks for the face region
@@ -324,24 +330,21 @@ def unmute_microphone():
 start_new_conversation()
 
 # Initialize Cature device, face detector and facial landmark predictor
-captureDevice, detector, predictor = initalize_face_Detection()
+initalize_face_Detection()
 
 while True:
     
-    # initialize sound
-    pygame.mixer.init()
-     
+         
     # Check if there is a person looking at the camera(Ohbot) and get the coordinates of the person's face    
-    isLookingAtMe, X,Y = is_person_looking_at(captureDevice, detector, predictor)
+    isLookingAtMe, X,Y = is_person_looking_at()
 
               
     # if the person is looking at the camera, conversate, new or existing....  
     if isLookingAtMe:
                 
-        #print('The person is looking at the camera')
-        
         # enable the microphone
         unmute_microphone()
+        time.sleep(0.1)
         engageWithPerson = True
         
         # Check if the thread is defined and if it's still running
@@ -369,6 +372,6 @@ while True:
         # remove backgound conversations if no one is actually talking to the Ohbot
         engageWithPerson = False
         mute_microphone()
-        #print('No one looking at the Ohbot')
-            
+        time.sleep(0.1)
+           
     time.sleep(0.3)
