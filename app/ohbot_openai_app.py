@@ -23,6 +23,7 @@ start_time = None
 captureDevice = None
 detector = None
 predictor = None
+interact_thread = threading.Thread()
 
 # Set up OpenAI API credentials and client object
 oAIClient = AzureOpenAI(
@@ -155,9 +156,12 @@ def interact():
         try:
             user_input = ""
                     
-            if engageWithPerson == False:
-                time.sleep(1)
-                continue
+            lock = threading.Lock()
+            with lock:
+                if engageWithPerson == False:
+                    pass 
+                    time.sleep(1)
+                    continue
             
             if len(messages) == 1:
                 user_input = "Introduce yourself and ask me for my name."
@@ -205,7 +209,10 @@ def eye_aspect_ratio(eye):
     C = math.dist(eye[0], eye[3])
 
     # compute the eye aspect ratio
-    ear = (A + B) / (2.0 * C)
+    try:
+        ear = (A + B) / (2.0 * C)
+    except ZeroDivisionError:
+        ear = 0
 
     # return the eye aspect ratio
     return ear
@@ -227,78 +234,74 @@ def is_person_looking_at():
     global predictor
     global person_looking_at_history
     
-    lookingAtCamera = False
-    EYE_AR_THRESH = 0.15
-    X = 5
-    Y = 5
+    try:
+        lookingAtCamera = False
+        EYE_AR_THRESH = 0.15
+        X = 5
+        Y = 5
+            
+        # Capture frame-by-frame
+        ret, frame = captureDevice.read()
+
+        # Convert the image to gray scale
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Perform face detection
+        faces = detector(gray, 0)
         
-    # Capture frame-by-frame
-    ret, frame = captureDevice.read()
+        if len(faces) > 0:
+            # Determine the facial landmarks for the face region
+            x1 = faces[0].left()  # left point
+            y1 = faces[0].top()  # top point
+            x2 = faces[0].right()  # right point
+            y2 = faces[0].bottom()  # bottom point
+            
+            # Calculate the center of the face and normalize the coordinatesfor Ohbot
+            X = round(100 - (int((x1 + x2) / 2) * 100) / 640) / 100
+            Y = round(100 - (int((y1 + y2) / 2) * 100) / 480) / 100
 
-    # Convert the image to gray scale
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # Create landmark object
+            landmarks = predictor(image=gray, box=faces[0])
+            
+            # Initialize lists to hold eye coordinates
+            left_eye = []
+            right_eye = []
 
-    # Perform face detection
-    faces = detector(gray, 0)
-    
-    if len(faces) > 0:
-        # Determine the facial landmarks for the face region
-        x1 = faces[0].left()  # left point
-        y1 = faces[0].top()  # top point
-        x2 = faces[0].right()  # right point
-        y2 = faces[0].bottom()  # bottom point
-        
-        # Calculate the center of the face and normalize the coordinatesfor Ohbot
-        X = round(100 - (int((x1 + x2) / 2) * 100) / 640) / 100
-        Y = round(100 - (int((y1 + y2) / 2) * 100) / 480) / 100
+            # Loop through all the points
+            for n in range(36, 42):  # Loop for left eye
+                x = landmarks.part(n).x
+                y = landmarks.part(n).y
+                left_eye.append((x, y))
 
-        # Create landmark object
-        landmarks = predictor(image=gray, box=faces[0])
-        
-        # Initialize lists to hold eye coordinates
-        left_eye = []
-        right_eye = []
+            for n in range(42, 48):  # Loop for right eye
+                x = landmarks.part(n).x
+                y = landmarks.part(n).y
+                right_eye.append((x, y))
 
-        # Loop through all the points
-        for n in range(36, 42):  # Loop for left eye
-            x = landmarks.part(n).x
-            y = landmarks.part(n).y
-            left_eye.append((x, y))
+            # Calculate the Eye Aspect Ratio for both eyes
+            leftEAR = eye_aspect_ratio(left_eye)
+            rightEAR = eye_aspect_ratio(right_eye)
 
-        for n in range(42, 48):  # Loop for right eye
-            x = landmarks.part(n).x
-            y = landmarks.part(n).y
-            right_eye.append((x, y))
-
-        # Calculate the Eye Aspect Ratio for both eyes
-        leftEAR = eye_aspect_ratio(left_eye)
-        rightEAR = eye_aspect_ratio(right_eye)
-
-        # Average the eye aspect ratio together for both eyes
-        ear = (leftEAR + rightEAR) / 2.0
-                 
-        if ear >= EYE_AR_THRESH:
-            lookingAtCamera = True
+            # Average the eye aspect ratio together for both eyes
+            ear = (leftEAR + rightEAR) / 2.0
+                     
+            if ear >= EYE_AR_THRESH:
+                lookingAtCamera = True
+            else:
+                lookingAtCamera = False
         else:
             lookingAtCamera = False
-    else:
-        lookingAtCamera = False
-    
-    # Logic here to determine if the person is looking at the Ohbot
-    if lookingAtCamera:
-        #person_looking_at_history.clear()
+        
+        # Logic here to determine if the person is looking at the Ohbot
+        if lookingAtCamera:
+            return True, X, Y
+        else:
+            return False, X, Y
 
-        return True, X, Y
-    else:
-        # person_looking_at_history.append({'isLookingAtCamera': False, 'TimeStamp': datetime.now()})
-        # # if the person has not been looking at the Ohbot for the last 10 cycles, return false
-        # # if they intermittentanly look away, continue the conversation
-        # if len(person_looking_at_history) == 30 and all(value == False for value in person_looking_at_history[-30:]):
-        #     print('no person present for last 10 cycles')
-        return False, X, Y  
-        # else:
-        #     return True, X, Y
-    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False, 0.5, 0.5  
+           
 def mute_microphone():
     devices = AudioUtilities.GetMicrophone()
     interface = devices.Activate(
@@ -342,9 +345,9 @@ while True:
         
         # Check if the thread is defined and if it's still running
         if not ('interact_thread' in locals() and interact_thread.is_alive()):
-            print('Starting a new interact thread...')
-            interact_thread = threading.Thread(target=interact, daemon=True)
-            interact_thread.start() 
+           print('Starting a new interact thread...')
+           interact_thread = threading.Thread(target=interact, daemon=True)
+           interact_thread.start() 
         # fill head tracking object
         gestureLookAt = {
             "gesture": "lookAt",
