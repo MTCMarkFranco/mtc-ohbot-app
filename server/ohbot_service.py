@@ -1,5 +1,6 @@
 import http.server
 import socketserver
+import json
 from ohbot import ohbot
 
 # Globals
@@ -23,8 +24,39 @@ else:
     ohbot.setVoice("-a100 -r0 -vZira")
     ohbot.wait(1)
 
+def narrow_range(num, min=0, max=10):
+    if num <= max /2 - 1:
+        return max /2 - 0.16
+    elif num >= max /2 + 1:
+        return max /2 + 0.16
+    else:
+        return max /2
+    
+def blink(velocity):
+    for x in range(10,0,-1):
+        ohbot.move(ohbot.LIDBLINK,x,eye = 0)
+        ohbot.wait(velocity)
+
+    for x in range(0,10):
+        ohbot.move(ohbot.LIDBLINK,x,eye = 0)
+        ohbot.wait(velocity)
+
+def lookAt(HeadCoordinates,EyeCoordinates, velocity):
+    ohbot.move(ohbot.HEADTURN,narrow_range(HeadCoordinates['X'] * 10))
+    ohbot.move(ohbot.HEADNOD,narrow_range(HeadCoordinates['Y'] * 10))
+    ohbot.move(ohbot.EYETURN, pos= EyeCoordinates['X'] * 10,spd=velocity)
+    ohbot.move(ohbot.EYETILT, pos= EyeCoordinates['Y'] * 10,spd=velocity)
+    
+    
+        
 class MyHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
+            
+            path = self.path
+
+            if path == '/gesture':
+                self.handle_gesture()
+                return
             
             try:
                 content_length = int(self.headers['Content-Length'])
@@ -34,18 +66,35 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
                 self.wfile.write(b"Received your message")
-                
-                # Blink
-                for x in range(10,0,-1):
-                    ohbot.move(ohbot.LIDBLINK,x,eye = 0)
-                    ohbot.wait(0.01)
-
-                for x in range(0,10):
-                    ohbot.move(ohbot.LIDBLINK,x,eye = 0)
-                    ohbot.wait(0.01)
-                
+                                                
                 # Say it...
                 ohbot.say(message)
+                                
+            except Exception as ex:
+                print(f"Error: {ex.line_no}")
+                self.send_response(500)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                self.wfile.write(b"Error")
+                return            
+    
+    def handle_gesture(self):
+            
+            try:
+                content_length = int(self.headers['Content-Length'])
+                body = self.rfile.read(content_length)
+                gesture = json.loads(body.decode('utf-8'))
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                self.wfile.write(b"Received your message")
+                
+                if gesture['gesture'] == "blink":
+                   blink(gesture['velocity'])
+                   
+                if gesture['gesture'] == "lookAt":
+                   lookAt(gesture['head_coordinates'],gesture['eye_coordinates'], gesture['velocity'])
+                                
                                 
             except Exception as ex:
                 print(f"Error: {ex.line_no}")

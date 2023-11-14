@@ -4,11 +4,25 @@ import openai
 from dotenv import load_dotenv
 import time
 import requests
+import cv2
+import dlib
+import math
+import threading
+from ctypes import cast, POINTER
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+import gc
 
 load_dotenv(dotenv_path=".\\ENV\\local.env")
 
 # Globals
 messages = []
+engageWithPerson = False
+person_looking_at_history = []
+start_time = None
+captureDevice = None
+detector = None
+predictor = None
 
 # Set up OpenAI API credentials
 openai.api_type = "azure"
@@ -36,6 +50,8 @@ def start_new_conversation():
     global messages
      
     messages.clear()
+    gc.collect()
+    
     # setup the messages and system prompt List defaults
     Instruction =   "You are a friendly person, looking to have friendly dialogue with whoever you speak with. " \
                     "You will answer questionsand ask questions. " \
@@ -78,20 +94,6 @@ def speech_to_text():
     elif result.reason == speechsdk.ResultReason.Canceled:
         return ""
 
-# Define the text-to-speech function
-# def text_to_speech(text):
-#     try:
-#         result = speech_synthesizer.speak_text_async(text).get()
-#         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-#             print("Text-to-speech conversion successful.")
-#             return True
-#         else:
-#             print(f"Error synthesizing audio: {result}")
-#             return False
-#     except Exception as ex:
-#         print(f"Error synthesizing audio: {ex}")
-#         return False
-
 # Define the Azure OpenAI language generation function
 def generate_text(prompt):
    
@@ -125,7 +127,7 @@ def generate_text(prompt):
    return response['choices'][0]['message']['content']
 
 # Define the text-to-speech function
-def send_to_ohbot_service(text):
+def send_message_to_ohbot_service(text):
     try:
         url = "http://127.0.0.1:8000"
         headers = {"Content-Type": "text/html"}
@@ -136,44 +138,240 @@ def send_to_ohbot_service(text):
         print(f"Error sending to Ohbot service: {ex}")
         return False
     
+# Define the text-to-speech function
+def send_gesture_to_ohbot_service(gesture):
+    try:
+        url = "http://127.0.0.1:8000/gesture"
+        headers = {"Content-Type": "text/html"}
+        response = requests.post(url, headers=headers, json=gesture)
+        response.raise_for_status()
+        return True
+    except Exception as ex:
+        print(f"Error sending to Ohbot service: {ex}")
+        return False
+ 
+def interact():
+    
+    while True:
+        global start_time
+        user_input = ""
+        
+        if engageWithPerson == False:
+            #print('No one looking at the Ohbot')
+            time.sleep(1)
+            continue
+        
+        # If I am in a conversation do not say hi and just continue conversation...
+        if len(messages) == 1:
+            #print('New Conversation, Ohbot Saying Hi!')
+            user_input = "Introduce yourself and ask me for my name."
+        else:
+            #print('Continuing existing conversation...')
+            user_input = speech_to_text()
+        
+        if user_input != "":
+            print(f"You said: {user_input}")
 
+            # Generate a response using OpenAI
+            prompt = f"Q: {user_input}\nA:"
+            response = generate_text(prompt)
+            print(f"AI said: {response}")
+
+            # Convert the response to speech using text-to-speech
+            
+            gestureBlink = {
+                "gesture": "blink",
+                "velocity": 0.01
+            }
+            
+            send_gesture_to_ohbot_service(gestureBlink)
+            send_message_to_ohbot_service(response)
+            
+            
+        else:
+            # if there is no interaction for 20 seconds start a new conversation
+            if start_time is None:
+                start_time = time.time()
+                print("Starting timer")    
+            
+            if time.time() - start_time >= 20:
+                start_new_conversation()
+                start_time = time.time()
+            
+            print("new conversion in: " + str(20 - (time.time() - start_time)))    
+            time.sleep(1)
+
+def eye_aspect_ratio(eye):
+    # compute the euclidean distances between the two sets of
+    # vertical eye landmarks (x, y)-coordinates
+    A = math.dist(eye[1], eye[5])
+    B = math.dist(eye[2], eye[4])
+
+    # compute the euclidean distance between the horizontal
+    # eye landmark (x, y)-coordinates
+    C = math.dist(eye[0], eye[3])
+
+    # compute the eye aspect ratio
+    ear = (A + B) / (2.0 * C)
+
+    # return the eye aspect ratio
+    return ear
+
+def initalize_face_Detection():
+    
+    global captureDevice, detector, predictor
+    
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor("recognition_models\\shape_predictor_68_face_landmarks.dat")
+    captureDevice = cv2.VideoCapture(0)   
+    
+    return
+
+def is_person_looking_at():
+    
+    global captureDevice
+    global detctor
+    global predictor
+    global person_looking_at_history
+    
+    lookingAtCamera = False
+    EYE_AR_THRESH = 0.15
+    X = 5
+    Y = 5
+        
+    # Capture frame-by-frame
+    ret, frame = captureDevice.read()
+
+    # Convert the image to gray scale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Perform face detection
+    faces = detector(gray, 0)
+    
+    if len(faces) > 0:
+        # Determine the facial landmarks for the face region
+        x1 = faces[0].left()  # left point
+        y1 = faces[0].top()  # top point
+        x2 = faces[0].right()  # right point
+        y2 = faces[0].bottom()  # bottom point
+        
+        # Calculate the center of the face and normalize the coordinatesfor Ohbot
+        X = round(100 - (int((x1 + x2) / 2) * 100) / 640) / 100
+        Y = round(100 - (int((y1 + y2) / 2) * 100) / 480) / 100
+
+        # Create landmark object
+        landmarks = predictor(image=gray, box=faces[0])
+        
+        # Initialize lists to hold eye coordinates
+        left_eye = []
+        right_eye = []
+
+        # Loop through all the points
+        for n in range(36, 42):  # Loop for left eye
+            x = landmarks.part(n).x
+            y = landmarks.part(n).y
+            left_eye.append((x, y))
+
+        for n in range(42, 48):  # Loop for right eye
+            x = landmarks.part(n).x
+            y = landmarks.part(n).y
+            right_eye.append((x, y))
+
+        # Calculate the Eye Aspect Ratio for both eyes
+        leftEAR = eye_aspect_ratio(left_eye)
+        rightEAR = eye_aspect_ratio(right_eye)
+
+        # Average the eye aspect ratio together for both eyes
+        ear = (leftEAR + rightEAR) / 2.0
+                 
+        if ear >= EYE_AR_THRESH:
+            lookingAtCamera = True
+        else:
+            lookingAtCamera = False
+    else:
+        lookingAtCamera = False
+    
+    # Logic here to determine if the person is looking at the Ohbot
+    if lookingAtCamera:
+        #person_looking_at_history.clear()
+
+        return True, X, Y
+    else:
+        # person_looking_at_history.append({'isLookingAtCamera': False, 'TimeStamp': datetime.now()})
+        # # if the person has not been looking at the Ohbot for the last 10 cycles, return false
+        # # if they intermittentanly look away, continue the conversation
+        # if len(person_looking_at_history) == 30 and all(value == False for value in person_looking_at_history[-30:]):
+        #     print('no person present for last 10 cycles')
+        return False, X, Y  
+        # else:
+        #     return True, X, Y
+    
+def mute_microphone():
+    devices = AudioUtilities.GetMicrophone()
+    interface = devices.Activate(
+        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    volume = cast(interface, POINTER(IAudioEndpointVolume))
+    volume.SetMute(1, None)
+
+def unmute_microphone():
+    devices = AudioUtilities.GetMicrophone()
+    interface = devices.Activate(
+        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    volume = cast(interface, POINTER(IAudioEndpointVolume))
+    volume.SetMute(0, None)
+    
+              
 #  *****************************************************
 #  ************** MAIN PROGRAM FLOW ********************
 #  *****************************************************
 
-# Initialize the start time
-start_time = None
 
 # Initialize a new conversation
 start_new_conversation()
 
-# Main program loop
+# Initialize Cature device, face detector and facial landmark predictor
+initalize_face_Detection()
+
 while True:
-    # Get input from user using speech-to-text
-    user_input = speech_to_text()
     
-    if user_input != "":
-        start_time =  None
-        print(f"You said: {user_input}")
+         
+    # Check if there is a person looking at the camera(Ohbot) and get the coordinates of the person's face    
+    isLookingAtMe, X,Y = is_person_looking_at()
 
-        # Generate a response using OpenAI
-        prompt = f"Q: {user_input}\nA:"
-        response = generate_text(prompt)
-        #response = user_input
-        print(f"AI said: {response}")
-
-        # Convert the response to speech using text-to-speech
-        send_to_ohbot_service(response)
+              
+    # if the person is looking at the camera, conversate, new or existing....  
+    if isLookingAtMe:
+                
+        # enable the microphone
+        unmute_microphone()
+        time.sleep(0.1)
+        engageWithPerson = True
+        
+        # Check if the thread is defined and if it's still running
+        if not ('interact_thread' in locals() and interact_thread.is_alive()):
+            print('Starting a new interact thread...')
+            interact_thread = threading.Thread(target=interact, daemon=True)
+            interact_thread.start() 
+        # fill head tracking object
+        gestureLookAt = {
+            "gesture": "lookAt",
+            "head_coordinates": {
+                "X": X ,
+                "Y": Y 
+            },
+            "eye_coordinates": {
+                "X": X ,
+                "Y": Y
+            },
+            "velocity": 0.01
+        }
+        send_gesture_to_ohbot_service(gestureLookAt)   
         
     else:
-        # if there are no questions within 1 minute, start a new conversation 
-        if start_time is None:
-            start_time = time.time()
-            print("Starting timer")    
         
-        if time.time() - start_time >= 20:
-            start_new_conversation()
-            start_time = time.time()
-            
-        time.sleep(1)
-        
+        # remove backgound conversations if no one is actually talking to the Ohbot
+        engageWithPerson = False
+        mute_microphone()
+        time.sleep(0.1)
+           
+    time.sleep(0.3)
