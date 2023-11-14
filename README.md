@@ -20,7 +20,7 @@ This is a sample application for the MTC OHBot.
    
    `SPEECH_KEY=<Your Azure Speech Key>`
    
-   `AOAI_KEY=<Your Open AI Key>`
+   `AZURE_OPENAI_API_KEY=<Your Open AI Key>`
    
    `OPENAI_ENDPOINT=<Your OpenAI EndPoint>`
 
