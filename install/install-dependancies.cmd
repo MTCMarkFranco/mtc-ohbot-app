@@ -60,11 +60,10 @@ set PY364=%USERPROFILE%\AppData\Local\Programs\Python\Python36\python.exe
 %PY311% -m pip install multidict==6.0.4
 %PY311% -m pip install numpy==1.26.1
 %PY311% -m pip install oauthlib==3.2.2
-%PY311% -m pip install openai==1.2.4
-%PY311% -m pip install openapi-core==0.18.1
-%PY311% -m pip install openapi-schema-validator==0.6.2
-%PY311% -m pip install openapi-spec-validator==0.6.0
-%PY311% -m pip install opencv-python==4.8.1.78
+%PY311% -m pip install openai --upgrade
+%PY311% -m pip install openapi-core --upgrade
+%PY311% -m pip install openapi-schema-validator --upgrade
+%PY311% -m pip install openapi-spec-validator --upgrade
 %PY311% -m pip install packaging==23.2
 %PY311% -m pip install parse==1.19.1
 %PY311% -m pip install pathable==0.4.3
@@ -132,7 +131,6 @@ azure-cognitiveservices-speech==1.19.0
 %PY364% -m pip install numpy==1.19.5
 %PY364% -m pip install oauthlib==3.2.2
 %PY364% -m pip install ohbot==4.0.8
-%PY364% -m pip install opencv-python==4.8.1.78
 %PY364% -m pip install pip==21.3.1
 %PY364% -m pip install platformdirs==2.4.0
 %PY364% -m pip install playsound==1.3.0
