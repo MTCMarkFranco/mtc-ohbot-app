@@ -257,8 +257,9 @@ def is_person_looking_at():
             y2 = faces[0].bottom()  # bottom point
             
             # Calculate the center of the face and normalize the coordinatesfor Ohbot
-            X = round(100 - (int((x1 + x2) / 2) * 100) / 640) / 100
-            Y = round(100 - (int((y1 + y2) / 2) * 100) / 480) / 100
+            X = math.ceil(100 - (int((x1 + x2) / 2) * 100) / 640) / 100
+            Y = math.ceil(100 - (int((y1 + y2) / 2) * 100) / 480) / 100
+            # print(f"X: {X} , Y: {Y}")
 
             # Create landmark object
             landmarks = predictor(image=gray, box=faces[0])
@@ -339,7 +340,7 @@ while True:
     if isLookingAtMe:
                 
         # enable the microphone
-        unmute_microphone()
+        # unmute_microphone()
         time.sleep(0.1)
         engageWithPerson = True
         
@@ -367,7 +368,7 @@ while True:
         
         # remove backgound conversations if no one is actually talking to the Ohbot
         engageWithPerson = False
-        mute_microphone()
+        # mute_microphone()
         time.sleep(0.1)
            
     time.sleep(0.3)

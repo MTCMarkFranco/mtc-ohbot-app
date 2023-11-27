@@ -1,8 +1,12 @@
 @echo off
+rem @echo killing existing processes
+rem tskill cmd
+rem timeout 10
+
 @echo Starting Service...
-start %USERPROFILE%\AppData\Local\Programs\Python\Python36\python.exe .\server\ohbot_service.py
+start /MIN %USERPROFILE%\AppData\Local\Programs\Python\Python36\python.exe .\server\ohbot_service.py
 
 timeout 10
 
 @echo Starting App...
-start %USERPROFILE%\AppData\Local\Programs\Python\Python311\python.exe .\app\ohbot_openai_app.py
+%USERPROFILE%\AppData\Local\Programs\Python\Python311\python.exe .\app\ohbot_openai_app.py

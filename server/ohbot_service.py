@@ -23,6 +23,7 @@ else:
     ohbot.setSynthesizer("sapi")
     ohbot.setVoice("-a100 -r0 -vZira")
     ohbot.wait(1)
+    ohbot.say("I am ready for chatting!")
 
 def narrow_range(num, min=0, max=10):
     if num <= max /2 - 1:
@@ -41,11 +42,11 @@ def blink(velocity):
         ohbot.move(ohbot.LIDBLINK,x,eye = 0)
         ohbot.wait(velocity)
 
-def lookAt(HeadCoordinates,EyeCoordinates, velocity):
-    ohbot.move(ohbot.HEADTURN,narrow_range(HeadCoordinates['X'] * 10))
-    ohbot.move(ohbot.HEADNOD,narrow_range(HeadCoordinates['Y'] * 10))
-    ohbot.move(ohbot.EYETURN, pos= EyeCoordinates['X'] * 10,spd=velocity)
-    ohbot.move(ohbot.EYETILT, pos= EyeCoordinates['Y'] * 10,spd=velocity)
+def lookAt(HeadCoordinates,X,Y, velocity):
+    ohbot.move(ohbot.HEADTURN,narrow_range(X * 10))
+    ohbot.move(ohbot.HEADNOD,narrow_range(Y * 10))
+    ohbot.move(ohbot.EYETURN, pos= X * 10,spd=velocity)
+    ohbot.move(ohbot.EYETILT, pos= Y * 10,spd=velocity)
     
     
         
@@ -80,6 +81,8 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
     
     def handle_gesture(self):
             
+            x = 0.5
+            y = 0.5
             try:
                 content_length = int(self.headers['Content-Length'])
                 body = self.rfile.read(content_length)
@@ -93,7 +96,10 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                    blink(gesture['velocity'])
                    
                 if gesture['gesture'] == "lookAt":
-                   lookAt(gesture['head_coordinates'],gesture['eye_coordinates'], gesture['velocity'])
+                                if x != gesture['eye_coordinates']["X"] or y != gesture['eye_coordinates']["Y"]: 
+                                                x = gesture['eye_coordinates']["X"]
+                                                y = gesture['eye_coordinates']["Y"]
+                                                lookAt(gesture['head_coordinates'],x,y, gesture['velocity'])
                                 
                                 
             except Exception as ex:

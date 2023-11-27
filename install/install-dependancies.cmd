@@ -62,8 +62,8 @@ set PY364=%USERPROFILE%\AppData\Local\Programs\Python\Python36\python.exe
 %PY311% -m pip install oauthlib==3.2.2
 %PY311% -m pip install openai --upgrade
 %PY311% -m pip install openapi-core --upgrade
-%PY311% -m pip install openapi-schema-validator --upgrade
-%PY311% -m pip install openapi-spec-validator --upgrade
+%PY311% -m pip install openapi-schema-validator
+%PY311% -m pip install openapi-spec-validator
 %PY311% -m pip install packaging==23.2
 %PY311% -m pip install parse==1.19.1
 %PY311% -m pip install pathable==0.4.3
@@ -115,7 +115,6 @@ azure-cognitiveservices-speech==1.19.0
 %PY364% -m pip install comtypes==1.2.0
 %PY364% -m pip install dataclasses==0.8
 %PY364% -m pip install distlib==0.3.7
-%PY364% -m pip install dlib==19.24.2
 %PY364% -m pip install filelock==3.4.1
 %PY364% -m pip install flask==2.0.3
 %PY364% -m pip install gtts==2.2.4
