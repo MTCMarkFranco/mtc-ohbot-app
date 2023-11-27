@@ -12,6 +12,7 @@ from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 import gc
+import numpy as np
 
 load_dotenv(dotenv_path=".\\ENV\\local.env")
 
@@ -242,12 +243,24 @@ def is_person_looking_at():
             
         # Capture frame-by-frame
         ret, frame = captureDevice.read()
+  
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Define range of color To Remove Ceiling lighting (May need to be modified based on Hue of Light in your Center)
+        lower_color = np.array([243, 243, 243])
+        upper_color = np.array([246, 247, 243])
 
-        # Convert the image to gray scale
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # Create a mask for the pixels within the color range
+        mask = cv2.inRange(rgb_frame, lower_color, upper_color)
+
+        # Change these pixels to black
+        rgb_frame[mask != 0] = [0, 0, 0]
+
+        # Convert the image back to BGR
+        frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
 
         # Perform face detection
-        faces = detector(gray, 0)
+        faces = detector(frame, 0)
         
         if len(faces) > 0:
             # Determine the facial landmarks for the face region
@@ -262,7 +275,7 @@ def is_person_looking_at():
             # print(f"X: {X} , Y: {Y}")
 
             # Create landmark object
-            landmarks = predictor(image=gray, box=faces[0])
+            landmarks = predictor(image=frame, box=faces[0])
             
             # Initialize lists to hold eye coordinates
             left_eye = []
