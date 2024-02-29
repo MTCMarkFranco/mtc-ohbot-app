@@ -5,13 +5,18 @@ This is a sample application for the MTC OHBot.
 
 ## Pre-Requesites
 
+### Step 1 (Build Tools for some libraries).
+[Microsoft Visual C++ 14+ Build Tools](https://aka.ms/vs/17/release/vs_BuildTools.exe)
+
+#### Select all of the components in C++ as in the image below:
+![Install Everything under C++](images/Build-tools-install.jpg)
+
+### Step 2 (Install Python 3.6.4 and 3.11.0)
 **NOTE** You Need both versions of Python intlled to circumvent the differences between OhBot libraries and Azure libraries...
 
-[Download python 3.11.0](https://www.python.org/ftp/python/3.11.0/python-3.11.0-amd64.exe)
+[Download python 3.11.0](https://www.python.org/ftp/python/3.11.0/python-3.11.0-amd64.exe)  
 
-[Download python 3.6.4](https://www.python.org/downloads/release/python-364/)
-
-[Microsoft Visual C++ 14+ Build Tools](https://aka.ms/vs/17/release/vs_BuildTools.exe)
+[Download python 3.6.4](https://www.python.org/downloads/release/python-364/)  
 
 
 ## Configuration
