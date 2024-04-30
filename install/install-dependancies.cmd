@@ -10,9 +10,9 @@ set PY364=%USERPROFILE%\AppData\Local\Programs\Python\Python36\python.exe
 
 @echo 3.11.0 Libraries
 
-%PY311% -m pip install aiofiles==23.2.1
-%PY311% -m pip install aiohttp==3.9.0b0
-%PY311% -m pip install aiosignal==1.3.1
+rem %PY311% -m pip install aiofiles==23.2.1
+rem %PY311% -m pip install aiohttp==3.9.0b0
+rem %PY311% -m pip install aiosignal==1.3.1
 %PY311% -m pip install amqp==5.1.1
 %PY311% -m pip install anyio==3.7.1
 %PY311% -m pip install asgiref==3.7.2
@@ -60,10 +60,6 @@ set PY364=%USERPROFILE%\AppData\Local\Programs\Python\Python36\python.exe
 %PY311% -m pip install multidict==6.0.4
 %PY311% -m pip install numpy==1.26.1
 %PY311% -m pip install oauthlib==3.2.2
-%PY311% -m pip install openai --upgrade
-%PY311% -m pip install openapi-core --upgrade
-%PY311% -m pip install openapi-schema-validator
-%PY311% -m pip install openapi-spec-validator
 %PY311% -m pip install packaging==23.2
 %PY311% -m pip install parse==1.19.1
 %PY311% -m pip install pathable==0.4.3
@@ -72,7 +68,7 @@ set PY364=%USERPROFILE%\AppData\Local\Programs\Python\Python36\python.exe
 %PY311% -m pip install prompt-toolkit==3.0.39
 %PY311% -m pip install psutil==5.9.6
 %PY311% -m pip install pycaw==20230407
-%PY311% -m pip install pydantic==1.10.13
+%PY311% -m pip install pydantic==1.10.13 -force
 %PY311% -m pip install pygame==2.5.2
 %PY311% -m pip install pyqt5-qt5==5.15.2
 %PY311% -m pip install pyqt5-sip==12.13.0
@@ -101,7 +97,10 @@ set PY364=%USERPROFILE%\AppData\Local\Programs\Python\Python36\python.exe
 %PY311% -m pip install vine==5.0.0
 %PY311% -m pip install wcwidth==0.2.8
 %PY311% -m pip install werkzeug==3.0.0
-%PY311% -m pip install yarl==1.9.2 
+%PY311% -m pip install yarl==1.9.2
+%PY311% -m pip install semantic-kernel==0.9.6b1 --force
+%PY311% -m pip install openai==1.7.0 --force
+%PY311% -m pip install opencv-python-headless 
 
 
 @echo 3.6.4 Libraries
