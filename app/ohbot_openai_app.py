@@ -14,7 +14,7 @@ from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 import gc
 import numpy as np
 
-load_dotenv(dotenv_path=".\\ENV\\local.env")
+load_dotenv(dotenv_path="..\\local.env")
 
 # Globals
 messages = []
@@ -61,7 +61,7 @@ def start_new_conversation():
                     "Please be friendly and have a good conversation. " \
                     "add some humour to your responses including some laughing text in the form of 'hahaha' in the form of text, no emojis. " \
                     "Only return responses that can be converted safely to UTF-8 format. " \
-                    "Your name is Zira." \
+                    "Your name is Ro-Sham-Bo." \
                     "if not provided, you should ask for their name before giving a response. " \
                     "start off every response with the person's name. " \
                     "if you didn't understand the question or were given a partial sentence, response with 'I didn't quite get that, please try again.' " \
@@ -223,7 +223,7 @@ def initalize_face_Detection():
     global captureDevice, detector, predictor
     
     detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor("recognition_models\\shape_predictor_68_face_landmarks.dat")
+    predictor = dlib.shape_predictor("..\\recognition_models\\shape_predictor_68_face_landmarks.dat")
     captureDevice = cv2.VideoCapture(0)   
     
     return
@@ -243,24 +243,22 @@ def is_person_looking_at():
             
         # Capture frame-by-frame
         ret, frame = captureDevice.read()
+
+        if not ret:
+            print("Failed to capture image")
+            return False
   
+        # Convert the image from BGR to RGB
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        
-        # Define range of color To Remove Ceiling lighting (May need to be modified based on Hue of Light in your Center)
-        lower_color = np.array([243, 243, 243])
-        upper_color = np.array([246, 247, 243])
 
-        # Create a mask for the pixels within the color range
-        mask = cv2.inRange(rgb_frame, lower_color, upper_color)
+        # Check if the image is in the correct format
+        if rgb_frame.dtype != 'uint8' or len(rgb_frame.shape) != 3 or rgb_frame.shape[2] != 3:
+            print("Unsupported image type, must be 8bit gray or RGB image")
+            return False
 
-        # Change these pixels to black
-        rgb_frame[mask != 0] = [0, 0, 0]
-
-        # Convert the image back to BGR
-        frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
-
+                
         # Perform face detection
-        faces = detector(frame, 0)
+        faces = detector(rgb_frame, 0)
         
         if len(faces) > 0:
             # Determine the facial landmarks for the face region

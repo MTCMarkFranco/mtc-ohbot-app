@@ -8,6 +8,9 @@ set PY364=%USERPROFILE%\AppData\Local\Programs\Python\Python36\python.exe
 %PY311% -m pip install --upgrade pip
 %PY364% -m pip install --upgrade pip
 
+%PY311% -m pip install --upgrade pip --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --trusted-host pypi.org
+%PY364% -m pip install --upgrade pip --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --trusted-host pypi.org
+
 @echo 3.11.0 Libraries
 
 rem %PY311% -m pip install aiofiles==23.2.1
