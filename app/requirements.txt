@@ -1,0 +1,11 @@
+azure-cognitiveservices-speech
+azure-cognitiveservices-vision-computervision
+azure-common
+azure-core
+colorama
+comtypes
+dlib
+requests
+opencv-python-headless
+semantic-kernel
+pycaw

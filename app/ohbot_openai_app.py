@@ -1,6 +1,8 @@
 import os
 import azure.cognitiveservices.speech as speechsdk
-from openai import AzureOpenAI
+from semantic_kernel import Kernel
+import semantic_kernel.connectors.ai.open_ai as openai
+from semantic_kernel.prompt_template import PromptTemplateConfig
 from dotenv import load_dotenv
 import time
 import requests
@@ -13,6 +15,7 @@ from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 import gc
 import numpy as np
+import asyncio
 
 load_dotenv(dotenv_path="..\\local.env")
 
@@ -26,11 +29,19 @@ detector = None
 predictor = None
 interact_thread = threading.Thread()
 
-# Set up OpenAI API credentials and client object
-oAIClient = AzureOpenAI(
-    api_version="2023-07-01-preview",
-    azure_endpoint=os.getenv("OPENAI_ENDPOINT")
-)
+# Initialize the Semantic Kernel client
+kernel = Kernel()
+service_id="chat-gpt"
+openai_chat = openai.AzureChatCompletion(service_id=service_id, api_key=os.getenv("OPENAI_API_KEY"), deployment_name=os.getenv("MODEL"),endpoint=os.getenv("OPENAI_ENDPOINT"))
+#kernel.add_service("chat", openai_chat)
+# add the chat completion service for azure to the kernel
+
+kernel.add_service(openai_chat,True)
+
+req_settings = kernel.get_prompt_execution_settings_from_service_id(service_id)
+req_settings.max_tokens = 2000
+req_settings.temperature = 0.7
+req_settings.top_p = 0.8
 
 # Set up Azure Speech-to-Text and Text-to-Speech credentials
 speech_key = os.getenv("SPEECH_KEY")
@@ -97,32 +108,34 @@ def speech_to_text():
         return ""
 
 # Define the Azure OpenAI language generation function
-def generate_text(prompt):
+async def generate_text(prompt):
     global messages
 
     try:
+        messages.append({"role": "user", "content": prompt})
 
-        messages.insert(messages.__len__(), 
-                        {
-                            "role": "user", 
-                            "content": prompt
-                        })
-    
-    
-        completion = oAIClient.chat.completions.create(
-            model=os.getenv("MODEL"),   
-            messages=messages,
+      
+        prompt_template_config = PromptTemplateConfig(
+            template=prompt,
+            name="chattemplate",
+            template_format="semantic-kernel",
+            execution_settings=req_settings,
         )
-        
-        messages.insert(messages.__len__(), 
-                        {
-                            "role": "assistant", 
-                            "content": completion.choices[0].message.content
-                        })
-        
-        return completion.choices[0].message.content
 
-    except Exception:
+        chat_function = kernel.add_function(
+            function_name="chat_function",
+            plugin_name="chat_function",
+            prompt_template_config=prompt_template_config,
+        )
+
+        result = (await kernel.invoke(chat_function)).value[0].content
+        
+        messages.append({"role": "assistant", "content": result})
+
+        return result
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
         return "Sorry, I ran into a problem, can you repeat that?"
 
 # Define the text-to-speech function
@@ -149,7 +162,7 @@ def send_gesture_to_ohbot_service(gesture):
         print(f"Error sending to Ohbot service: {ex}")
         return False
  
-def interact():
+async def interact():
     
     while True:
         global start_time
@@ -173,7 +186,7 @@ def interact():
                 print(f"You said: {user_input}")
 
                 prompt = f"{user_input}"
-                response = generate_text(prompt)
+                response = await generate_text(prompt)
                 print(f"AI said: {response}")
 
                 gestureBlink = {
@@ -327,7 +340,9 @@ def unmute_microphone():
         IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
     volume = cast(interface, POINTER(IAudioEndpointVolume))
     volume.SetMute(0, None)
-    
+
+async def run_interact():
+    await interact()
               
 #  *****************************************************
 #  ************** MAIN PROGRAM FLOW ********************
@@ -358,7 +373,7 @@ while True:
         # Check if the thread is defined and if it's still running
         if not ('interact_thread' in locals() and interact_thread.is_alive()):
            print('Starting a new interact thread...')
-           interact_thread = threading.Thread(target=interact, daemon=True)
+           interact_thread = threading.Thread(target=lambda: asyncio.run(run_interact()), daemon=True)
            interact_thread.start() 
         # fill head tracking object
         gestureLookAt = {
