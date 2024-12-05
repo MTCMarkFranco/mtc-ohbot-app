@@ -16,11 +16,16 @@ from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 import gc
 import numpy as np
 import asyncio
+from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.functions import KernelArguments
+
 
 load_dotenv(dotenv_path="..\\local.env")
 
 # Globals
-messages = []
 engageWithPerson = False
 person_looking_at_history = []
 start_time = None
@@ -33,7 +38,6 @@ interact_thread = threading.Thread()
 kernel = Kernel()
 service_id="chat-gpt"
 openai_chat = openai.AzureChatCompletion(service_id=service_id, api_key=os.getenv("OPENAI_API_KEY"), deployment_name=os.getenv("MODEL"),endpoint=os.getenv("OPENAI_ENDPOINT"))
-#kernel.add_service("chat", openai_chat)
 # add the chat completion service for azure to the kernel
 
 kernel.add_service(openai_chat,True)
@@ -42,6 +46,17 @@ req_settings = kernel.get_prompt_execution_settings_from_service_id(service_id)
 req_settings.max_tokens = 2000
 req_settings.temperature = 0.7
 req_settings.top_p = 0.8
+req_settings.function_choice_behavior = FunctionChoiceBehavior.Auto()
+
+chat_history = ChatHistory()
+
+chat_function = kernel.add_function(
+    prompt="""{{#each chat_history}}{{#message role=role}}{{~content~}}{{/message}} {{/each}}""",
+    function_name="chat",
+    plugin_name="chat",
+    template_format="handlebars",
+    prompt_execution_settings=req_settings,
+)
 
 # Set up Azure Speech-to-Text and Text-to-Speech credentials
 speech_key = os.getenv("SPEECH_KEY")
@@ -53,15 +68,14 @@ speech_config.speech_synthesis_language = os.getenv("RECOGNITION_LANGUAGE")
 speech_config.speech_recognition_language = os.getenv("RECOGNITION_LANGUAGE")
 
 # Set up the voice configuration
-speech_config.speech_synthesis_voice_name = "en-CA-ClaraNeural"
+speech_config.speech_synthesis_voice_name = "en-US-NovaTurboMultilingualNeural"
 speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
 
 # start a new conversation context
 def start_new_conversation():
-    global messages
-     
-    messages.clear()
-    gc.collect()
+    # global chat_history
+
+    # chat_history.messages.clear()
     
     # setup the messages and system prompt List defaults
     Instruction =   "You are a friendly person, looking to have friendly dialogue with whoever you speak with. " \
@@ -70,9 +84,9 @@ def start_new_conversation():
                     "You will not use profanity. " \
                     "You will not be racist or sexist. " \
                     "Please be friendly and have a good conversation. " \
-                    "add some humour to your responses including some laughing text in the form of 'hahaha' in the form of text, no emojis. " \
+                    "add some humour to your responses. " \
                     "Only return responses that can be converted safely to UTF-8 format. " \
-                    "Your name is Ro-Sham-Bo." \
+                    "Your name is Ava." \
                     "if not provided, you should ask for their name before giving a response. " \
                     "start off every response with the person's name. " \
                     "if you didn't understand the question or were given a partial sentence, response with 'I didn't quite get that, please try again.' " \
@@ -80,13 +94,11 @@ def start_new_conversation():
                     "Your first response back to the user should be 'Hi There, what is your name?' " \
                     "if you do not have access to real-time data , try to find the information being asked and as a last resort " \
                     "say that you do not have access to that information at this time." \
+                    "Do Not return an emojis or ASCII that resembles emojis in your response. " \
 
-    messages=[
-                {
-                    "role": "system", 
-                    "content": Instruction
-                }
-        ]
+    chat_history.add_system_message(Instruction)
+
+
     print("Starting a new conversation")
 
 # Define the speech-to-text function
@@ -109,30 +121,21 @@ def speech_to_text():
 
 # Define the Azure OpenAI language generation function
 async def generate_text(prompt):
-    global messages
+    # global chat_history, chat_function, kernel
 
+    
     try:
-        messages.append({"role": "user", "content": prompt})
+       
+       chat_history.add_user_message(prompt)
+       arguments = KernelArguments(chat_history=chat_history)
 
-      
-        prompt_template_config = PromptTemplateConfig(
-            template=prompt,
-            name="chattemplate",
-            template_format="semantic-kernel",
-            execution_settings=req_settings,
+       answer = await kernel.invoke(
+        chat_function,
+        arguments=arguments,
         )
-
-        chat_function = kernel.add_function(
-            function_name="chat_function",
-            plugin_name="chat_function",
-            prompt_template_config=prompt_template_config,
-        )
-
-        result = (await kernel.invoke(chat_function)).value[0].content
         
-        messages.append({"role": "assistant", "content": result})
-
-        return result
+       chat_history.add_assistant_message(answer.value[0].content)
+       return answer.value[0].content
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -177,7 +180,7 @@ async def interact():
                     time.sleep(1)
                     continue
             
-            if len(messages) == 1:
+            if len(chat_history.messages) == 1:
                 user_input = "Introduce yourself and ask me for my name."
             else:
                 user_input = speech_to_text()
@@ -202,11 +205,11 @@ async def interact():
                     start_time = time.time()
                     print("Starting timer")    
                 
-                if time.time() - start_time >= 20:
+                if time.time() - start_time >= 120:
                     start_new_conversation()
                     start_time = time.time()
                 
-                print("new conversion in: " + str(20 - (time.time() - start_time)))    
+                print("new conversion in: " + str(120 - (time.time() - start_time)))    
                 time.sleep(1)
 
         except Exception as e:
