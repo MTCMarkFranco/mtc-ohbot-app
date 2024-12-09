@@ -8,15 +8,23 @@ import os
 from time import sleep
 import asyncio
 import threading
-import sounddevice as sd
+import pyaudiowpatch as pyaudio
 import numpy as np
 
 # Globals
 PORT = 8000
 load_dotenv(dotenv_path="..\\local.env")
 
+#initialize lip_synch Thread Object
+lip_synch_thread = None
+
 speech_key = os.getenv("SPEECH_KEY")
 service_region = os.getenv("REGION")
+
+# Constants for audio listener
+CHUNK = 1024  # Number of audio frames per buffer
+FORMAT = pyaudio.paInt16  # Audio format (16-bit PCM)
+CHANNELS = 1  # Mono audio
 
 # Initailise Ohbot
 ohbot.reset()
@@ -60,35 +68,73 @@ def lookAt(HeadCoordinates,X,Y, velocity):
     ohbot.move(ohbot.EYETURN, pos= X * 10,spd=velocity)
     ohbot.move(ohbot.EYETILT, pos= Y * 10,spd=velocity)
 
-# print(sd.query_devices())
+def get_rms(audio_data):
+    # Convert audio data to numpy array
+    samples = np.frombuffer(audio_data, dtype=np.int16)
+    # Calculate RMS
+    rms = np.sqrt(np.mean(samples**2))
+    return rms
 
-#async def move_lips():
-    # def audio_callback(indata, frames, time, status):
-    #     volume = float(np.linalg.norm(indata) / 10)
-    #     ohbot.lipTopPos = (5 + (volume / 3))
-    #     print("TOP: " + str(ohbot.lipTopPos))
-    #     ohbot.lipBottomPos = (5 + (volume / 2))
-    #     print("BOTTOM: " + str(ohbot.lipBottomPos))
-    #     sleep(0.01)
+# create an thread to ruun in the background called LipSynch
+def LipSynch():
+    with pyaudio.PyAudio() as p:
+        device_index = -1
+        sample_rate = -1
+        device_name = ""
+       
+        # loopback audio device
+        for loopback in p.get_loopback_device_info_generator():
+            print(f"{loopback}\r")
+            device_index = loopback.get('index')
+            sample_rate = (int)(loopback.get('defaultSampleRate'))
+            device_name = loopback.get('name')
 
-    # Query the default output device
-    # default_output_device = sd.default.device[1]
-    # Set the device to the default output device
-    # device = default_output_device
-    
-    # with sd.InputStream(callback=audio_callback, channels=1, samplerate=44100, device=device):
-    #     while True:
-    #         await asyncio.sleep(0.1)
+        if (device_index < 0):
+            print ("Sorry, no loopback device was found")
+            p.terminate()
+            exit()
+            
+        # Open audio stream
+        stream = p.open(format=FORMAT,
+                    channels=CHANNELS,
+                    rate=sample_rate,
+                    input=True,
+                    input_device_index=device_index,
+                    frames_per_buffer=CHUNK)
 
-# def start_lip_sync():
-#     loop = asyncio.new_event_loop()
-#     asyncio.set_event_loop(loop)
-#     loop.run_until_complete(move_lips())
+        print("Monitoring audio... press ctrl C to stop")
 
-# lip_sync_thread = threading.Thread(target=start_lip_sync)
-# lip_sync_thread.start()
+        try:
+            while True:
+                # Read a chunk of data from the stream
+                data = stream.read(CHUNK)
+                # Get the RMS value
+                rms = get_rms(data)
+                # Print the audio level.  Uncomment this to see the audio levels
+                # print(f"Audio Level: {rms:.2f}")
+                # Move Ohbot's lips.  You may need to adjust this if the lips
+                # are moving too much or too little
+                if (not np.isnan(rms)):
+                    level = int(rms / 13)
+                    ohbot.move(ohbot.TOPLIP, 5 + level / 3)
+                    ohbot.move(ohbot.BOTTOMLIP, 5 + level)
 
-class MyHandler(http.server.SimpleHTTPRequestHandler):
+        except KeyboardInterrupt:
+            print("Stopped Listening Rendered Audio....")
+
+        # Close the stream and clean up
+        ohbot.close()
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+# Run LipSynch in a background thread
+lip_synch_thread = threading.Thread(target=LipSynch)
+lip_synch_thread.daemon = True
+lip_synch_thread.start()
+
+# Continue execution below
+class ohbotHttpServer(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
             
             path = self.path
@@ -176,7 +222,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b"Error")
                 return            
 
-with socketserver.TCPServer(("127.0.0.1", PORT), MyHandler) as httpd:
+with socketserver.TCPServer(("127.0.0.1", PORT), ohbotHttpServer) as httpd:
     print("Ohbot is listening on port...", PORT)
     httpd.serve_forever()
 
