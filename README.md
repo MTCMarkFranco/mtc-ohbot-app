@@ -35,6 +35,8 @@ This is a sample application for the MTC OHBot.
 
    `RECOGNITION_LANGUAGE=en-CA`
    
+   `WEATHER_API_KEY`
+   
    
 ## Installation
 1. Clone the repository
