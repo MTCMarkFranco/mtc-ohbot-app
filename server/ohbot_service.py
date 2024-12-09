@@ -41,7 +41,7 @@ if (ohbot.connected == False):
     print("Ohbot Not connected!")
 else:
     ohbot.setSynthesizer("sapi")
-    ohbot.setVoice("-a100 -r10 -vZira")  # Adjusted pitch to a higher tone
+    ohbot.setVoice("-a100 -r0 -vZira")  # Adjusted rate to normal speed
     ohbot.wait(1)
     ohbot.say("I am ready for chatting!")
 
@@ -84,7 +84,8 @@ def LipSynch():
        
         # loopback audio device
         for loopback in p.get_loopback_device_info_generator():
-            print(f"{loopback}\r")
+            #print(f"{loopback}\r")
+            print ("Success, loopback device was found!")
             device_index = loopback.get('index')
             sample_rate = (int)(loopback.get('defaultSampleRate'))
             device_name = loopback.get('name')
@@ -152,8 +153,6 @@ class ohbotHttpServer(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b"Received your message")
                                                 
-                # Say it...
-                ##############################################################################
                 speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
                 speech_config.speech_synthesis_voice_name = "en-US-JennyNeural"  # Changed to a voice with a higher pitch
                 speech_config.speech_synthesis_language = "en-CA"  # Adjusted language to match the new voice
@@ -165,23 +164,13 @@ class ohbotHttpServer(http.server.SimpleHTTPRequestHandler):
 
                 if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
                     print("Speech synthesized to 'output.wav'")
-                    
-                    #ohbot.lipTopPos =  5 #5 + (ohbot.playSound("C:\Projects\new-oh-bot\mtc-ohbot-app\server\output.wav\output.wav")) /3
                     ohbot.playSound(untilDone=True, name= "output")
 
-                    
-                    # ohbot.playSound(name=".\output.wav",untilDone=True)
-                    # need to find a way to play the wav file and move the lips to the wav file
                 elif result.reason == speechsdk.ResultReason.Canceled:
                     cancellation_details = result.cancellation_details
                     print(f"Speech synthesis canceled: {cancellation_details.reason}")
                     if cancellation_details.reason == speechsdk.CancellationReason.Error:
                         print(f"Error details: {cancellation_details.error_details}")
-
-                
-                ##############################################################################
-                #ohbot.say(message)
-                #ohbot.sapivoice
                                 
             except Exception as ex:
                 print(f"Error: {ex.line_no}")

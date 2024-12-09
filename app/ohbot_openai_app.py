@@ -21,7 +21,7 @@ from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoic
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import KernelArguments
-
+from weather_plugin import WeatherPlugin
 
 load_dotenv(dotenv_path="..\\local.env")
 
@@ -58,6 +58,10 @@ chat_function = kernel.add_function(
     prompt_execution_settings=req_settings,
 )
 
+# Initialize the WeatherPlugin
+weather_plugin = WeatherPlugin()
+weather_function = kernel.add_plugin(weather_plugin, "WeatherPlugin")
+
 # Set up Azure Speech-to-Text and Text-to-Speech credentials
 speech_key = os.getenv("SPEECH_KEY")
 service_region = os.getenv("REGION")
@@ -75,7 +79,7 @@ speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
 def start_new_conversation():
     # global chat_history
 
-    # chat_history.messages.clear()
+    chat_history.messages.clear()
     
     # setup the messages and system prompt List defaults
     Instruction =   "You are a friendly person, looking to have friendly dialogue with whoever you speak with. " \
@@ -94,11 +98,9 @@ def start_new_conversation():
                     "Your first response back to the user should be 'Hi There, what is your name?' " \
                     "if you do not have access to real-time data , try to find the information being asked and as a last resort " \
                     "say that you do not have access to that information at this time." \
-                    "Do Not return an emojis or ASCII that resembles emojis in your response. " \
+                    "Do not return an emojis or ASCII that resembles emojis in your response. " \
 
     chat_history.add_system_message(Instruction)
-
-
     print("Starting a new conversation")
 
 # Define the speech-to-text function
@@ -359,12 +361,10 @@ start_new_conversation()
 initalize_face_Detection()
 
 while True:
-    
-         
+           
     # Check if there is a person looking at the camera(Ohbot) and get the coordinates of the person's face    
     isLookingAtMe, X,Y = is_person_looking_at()
-
-              
+           
     # if the person is looking at the camera, conversate, new or existing....  
     if isLookingAtMe:
                 
