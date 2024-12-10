@@ -49,13 +49,9 @@ else:
     ohbot.say("I am ready for chatting!")
 
 def narrow_range(num, min=0, max=10):
-    if num <= max /2 - 1:
-        return max /2 - 0.16
-    elif num >= max /2 + 1:
-        return max /2 + 0.16
-    else:
-        return max /2
-    
+    # Map the input range [0, 10] to the output range [4, 6]
+    return round(abs(4 + (num / (max - min)) * (6 - 4)))
+
 def blink(velocity):
     for x in range(10,0,-1):
         ohbot.move(ohbot.LIDBLINK,x,eye = 0)
@@ -73,10 +69,12 @@ def blink_randomly():
         blink(0.01)
 
 def lookAt(HeadCoordinates,X,Y, velocity):
-    ohbot.move(ohbot.HEADTURN,narrow_range(X * 10))
-    ohbot.move(ohbot.HEADNOD,narrow_range(Y * 10))
-    ohbot.move(ohbot.EYETURN, pos= X * 10,spd=velocity)
-    ohbot.move(ohbot.EYETILT, pos= Y * 10,spd=velocity)
+    
+    print (f"New pos(X): {X}")
+    ohbot.move(ohbot.HEADTURN,narrow_range(round(X * 10)))
+    ohbot.move(ohbot.HEADNOD,narrow_range(round(Y * 10)))
+    ohbot.move(ohbot.EYETURN, pos= narrow_range(round(X * 10)),spd=velocity)
+    ohbot.move(ohbot.EYETILT, pos= narrow_range(round(Y * 10)),spd=velocity)
 
 def get_rms(audio_data):
     # Convert audio data to numpy array
@@ -130,6 +128,9 @@ def LipSynch():
                     if(level > 0):
                         ohbot.move(ohbot.TOPLIP, 5 + level / 3)
                         ohbot.move(ohbot.BOTTOMLIP, 5 + level)
+                    else:
+                        ohbot.move(ohbot.TOPLIP, 5)
+                        ohbot.move(ohbot.BOTTOMLIP, 5)
 
         except KeyboardInterrupt:
             print("Stopped Listening Rendered Audio....")

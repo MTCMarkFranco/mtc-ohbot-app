@@ -187,7 +187,7 @@ async def interact():
                     time.sleep(1)
                     continue
             
-            if len(chat_history.messages) == 1:
+            if (len(chat_history.messages) <= 1):
                 user_input = "Introduce yourself and ask me for my name."
             else:
                 user_input = speech_to_text()
@@ -212,11 +212,11 @@ async def interact():
                     start_time = time.time()
                     print("Starting timer")    
                 
-                if time.time() - start_time >= 120:
+                if time.time() - start_time >= 20:
                     start_new_conversation()
                     start_time = time.time()
                 
-                print("new conversion in: " + str(120 - (time.time() - start_time)))    
+                print("new conversion in: " + str(20 - (time.time() - start_time)))    
                 time.sleep(1)
 
         except Exception as e:
@@ -337,19 +337,19 @@ def is_person_looking_at():
         print(f"An error occurred: {e}")
         return False, 0.5, 0.5  
            
-def mute_microphone():
-    devices = AudioUtilities.GetMicrophone()
-    interface = devices.Activate(
-        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-    volume = cast(interface, POINTER(IAudioEndpointVolume))
-    volume.SetMute(1, None)
+# def mute_microphone():
+#     devices = AudioUtilities.GetMicrophone()
+#     interface = devices.Activate(
+#         IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+#     volume = cast(interface, POINTER(IAudioEndpointVolume))
+#     volume.SetMute(1, None)
 
-def unmute_microphone():
-    devices = AudioUtilities.GetMicrophone()
-    interface = devices.Activate(
-        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-    volume = cast(interface, POINTER(IAudioEndpointVolume))
-    volume.SetMute(0, None)
+# def unmute_microphone():
+#     devices = AudioUtilities.GetMicrophone()
+#     interface = devices.Activate(
+#         IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+#     volume = cast(interface, POINTER(IAudioEndpointVolume))
+#     volume.SetMute(0, None)
 
 async def run_interact():
     await interact()
