@@ -2,7 +2,6 @@ import os
 import azure.cognitiveservices.speech as speechsdk
 from semantic_kernel import Kernel
 import semantic_kernel.connectors.ai.open_ai as openai
-from semantic_kernel.prompt_template import PromptTemplateConfig
 from dotenv import load_dotenv
 import time
 import requests
@@ -22,6 +21,7 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import KernelArguments
 from weather_plugin import WeatherPlugin
+from engagement_plugin import EngagementsPlugin
 
 load_dotenv(dotenv_path="..\\local.env")
 
@@ -44,8 +44,8 @@ kernel.add_service(openai_chat,True)
 
 req_settings = kernel.get_prompt_execution_settings_from_service_id(service_id)
 req_settings.max_tokens = 2000
-req_settings.temperature = 0.7
-req_settings.top_p = 0.8
+req_settings.temperature = 0.45
+req_settings.top_p = 0.95
 req_settings.function_choice_behavior = FunctionChoiceBehavior.Auto()
 
 chat_history = ChatHistory()
@@ -61,6 +61,9 @@ chat_function = kernel.add_function(
 # Initialize the WeatherPlugin
 weather_plugin = WeatherPlugin()
 weather_function = kernel.add_plugin(weather_plugin, "WeatherPlugin")
+
+engagement_plugin = EngagementsPlugin()
+engagement_function = kernel.add_plugin(engagement_plugin, "EngagementsPlugin")
 
 # Set up Azure Speech-to-Text and Text-to-Speech credentials
 speech_key = os.getenv("SPEECH_KEY")
@@ -82,8 +85,8 @@ def start_new_conversation():
     chat_history.messages.clear()
     
     # setup the messages and system prompt List defaults
-    Instruction =   "You are a friendly person, looking to have friendly dialogue with whoever you speak with. " \
-                    "You will answer questionsand ask questions. " \
+    Instruction =   "You are a friendly person, looking to help customers find their way in the Innovation Hub. " \
+                    "You will answer questions and ask questions. " \
                     "You will not be rude or mean. " \
                     "You will not use profanity. " \
                     "You will not be racist or sexist. " \
@@ -92,13 +95,15 @@ def start_new_conversation():
                     "Only return responses that can be converted safely to UTF-8 format. " \
                     "Your name is Ava." \
                     "if not provided, you should ask for their name before giving a response. " \
-                    "start off every response with the person's name. " \
+                    "start off some responses with the person's name. " \
                     "if you didn't understand the question or were given a partial sentence, response with 'I didn't quite get that, please try again.' " \
                     "try to make small talk if there isn't a direct question being asked" \
                     "Your first response back to the user should be 'Hi There, what is your name?' " \
                     "if you do not have access to real-time data , try to find the information being asked and as a last resort " \
                     "say that you do not have access to that information at this time." \
                     "Do not return an emojis or ASCII that resembles emojis in your response. " \
+                    "you will greet people and ask them which company they are from. " \
+                    
 
     chat_history.add_system_message(Instruction)
     print("Starting a new conversation")
@@ -285,7 +290,7 @@ def is_person_looking_at():
             x2 = faces[0].right()  # right point
             y2 = faces[0].bottom()  # bottom point
             
-            # Calculate the center of the face and normalize the coordinatesfor Ohbot
+            # Calculate the center of the face and normalize the coordinates for Ohbot
             X = math.ceil(100 - (int((x1 + x2) / 2) * 100) / 640) / 100
             Y = math.ceil(100 - (int((y1 + y2) / 2) * 100) / 480) / 100
             # print(f"X: {X} , Y: {Y}")
@@ -389,7 +394,7 @@ while True:
                 "X": X ,
                 "Y": Y
             },
-            "velocity": 0.01
+            "velocity": 0.03
         }
         send_gesture_to_ohbot_service(gestureLookAt)   
         

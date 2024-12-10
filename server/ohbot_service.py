@@ -10,6 +10,8 @@ import asyncio
 import threading
 import pyaudiowpatch as pyaudio
 import numpy as np
+import random
+import time
 
 # Globals
 PORT = 8000
@@ -39,6 +41,7 @@ ohbot.move(ohbot.EYETILT,8)
 print("Initilizing OhBot...")
 if (ohbot.connected == False):
     print("Ohbot Not connected!")
+    exit()
 else:
     ohbot.setSynthesizer("sapi")
     ohbot.setVoice("-a100 -r0 -vZira")  # Adjusted rate to normal speed
@@ -62,6 +65,13 @@ def blink(velocity):
         ohbot.move(ohbot.LIDBLINK,x,eye = 0)
         ohbot.wait(velocity)
 
+def blink_randomly():
+    while True:
+        # Generate a random delay between 3 and 10 seconds
+        delay = random.uniform(1, 10)
+        time.sleep(delay)
+        blink(0.01)
+
 def lookAt(HeadCoordinates,X,Y, velocity):
     ohbot.move(ohbot.HEADTURN,narrow_range(X * 10))
     ohbot.move(ohbot.HEADNOD,narrow_range(Y * 10))
@@ -84,7 +94,7 @@ def LipSynch():
        
         # loopback audio device
         for loopback in p.get_loopback_device_info_generator():
-            #print(f"{loopback}\r")
+            print(f"{loopback}\r")
             print ("Success, loopback device was found!")
             device_index = loopback.get('index')
             sample_rate = (int)(loopback.get('defaultSampleRate'))
@@ -116,9 +126,10 @@ def LipSynch():
                 # Move Ohbot's lips.  You may need to adjust this if the lips
                 # are moving too much or too little
                 if (not np.isnan(rms)):
-                    level = int(rms / 13)
-                    ohbot.move(ohbot.TOPLIP, 5 + level / 3)
-                    ohbot.move(ohbot.BOTTOMLIP, 5 + level)
+                    level = int(rms / 10)
+                    if(level > 0):
+                        ohbot.move(ohbot.TOPLIP, 5 + level / 3)
+                        ohbot.move(ohbot.BOTTOMLIP, 5 + level)
 
         except KeyboardInterrupt:
             print("Stopped Listening Rendered Audio....")
@@ -129,10 +140,14 @@ def LipSynch():
         stream.close()
         p.terminate()
 
-# Run LipSynch in a background thread
+# Run background threads
 lip_synch_thread = threading.Thread(target=LipSynch)
 lip_synch_thread.daemon = True
 lip_synch_thread.start()
+
+blink_thread = threading.Thread(target=blink_randomly)
+blink_thread.daemon = True
+blink_thread.start()
 
 # Continue execution below
 class ohbotHttpServer(http.server.SimpleHTTPRequestHandler):
@@ -154,7 +169,7 @@ class ohbotHttpServer(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b"Received your message")
                                                 
                 speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
-                speech_config.speech_synthesis_voice_name = "en-US-JennyNeural"  # Changed to a voice with a higher pitch
+                speech_config.speech_synthesis_voice_name = "en-US-CoraMultilingualNeural"  # Changed to a voice with a higher pitch
                 speech_config.speech_synthesis_language = "en-CA"  # Adjusted language to match the new voice
 
                 audio_config = speechsdk.audio.AudioOutputConfig(filename=".\\ohbotData\\Sounds\\output.wav")
