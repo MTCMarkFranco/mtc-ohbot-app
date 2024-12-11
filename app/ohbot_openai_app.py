@@ -20,8 +20,8 @@ from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoic
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import KernelArguments
-from weather_plugin import WeatherPlugin
-from engagement_plugin import EngagementsPlugin
+from plugins.weather.weather_plugin import WeatherPlugin
+from plugins.engagements.engagement_plugin import EngagementsPlugin
 
 load_dotenv(dotenv_path="..\\local.env")
 
@@ -58,12 +58,15 @@ chat_function = kernel.add_function(
     prompt_execution_settings=req_settings,
 )
 
-# Initialize the WeatherPlugin
+# Initialize Plugins
 weather_plugin = WeatherPlugin()
 weather_function = kernel.add_plugin(weather_plugin, "WeatherPlugin")
 
 engagement_plugin = EngagementsPlugin()
 engagement_function = kernel.add_plugin(engagement_plugin, "EngagementsPlugin")
+
+# Add the Semantic function 'engagementInfoByCompany' to the kernel
+engagementInfoByCompanyFunction = kernel.add_plugin(parent_directory=".\\plugins\\semantic_functions", plugin_name="engagementInfoByCompany")
 
 # Set up Azure Speech-to-Text and Text-to-Speech credentials
 speech_key = os.getenv("SPEECH_KEY")
@@ -76,6 +79,7 @@ speech_config.speech_recognition_language = os.getenv("RECOGNITION_LANGUAGE")
 
 # Set up the voice configuration
 speech_config.speech_synthesis_voice_name = "en-US-NovaTurboMultilingualNeural"
+
 speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
 
 # start a new conversation context
@@ -103,6 +107,9 @@ def start_new_conversation():
                     "say that you do not have access to that information at this time." \
                     "Do not return an emojis or ASCII that resembles emojis in your response. " \
                     "you will greet people and ask them which company they are from. " \
+                    "Room directions are as follows: " \
+                    "Great Bear: walk straight for 10 feet, turn right, walk down the coridor, and turn left. first sdoor on right." \
+                    "Muskoka: walk straight for 10 feet, turn right, walk down the coridor, and turn left. Second door on right." \
                     
 
     chat_history.add_system_message(Instruction)
