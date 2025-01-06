@@ -22,6 +22,7 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import KernelArguments
 from plugins.weather.weather_plugin import WeatherPlugin
 from plugins.engagements.engagement_plugin import EngagementsPlugin
+from plugins.engagements.roomFinder_plugin import RoomFinderPlugin
 
 load_dotenv(dotenv_path="..\\local.env")
 
@@ -64,6 +65,9 @@ weather_function = kernel.add_plugin(weather_plugin, "WeatherPlugin")
 
 engagement_plugin = EngagementsPlugin()
 engagement_function = kernel.add_plugin(engagement_plugin, "EngagementsPlugin")
+
+roomfinder_plugin = RoomFinderPlugin()
+roomfinder_function = kernel.add_plugin(roomfinder_plugin, "RoomFinderPlugin")
 
 # Add the Semantic function 'engagementInfoByCompany' to the kernel
 engagementInfoByCompanyFunction = kernel.add_plugin(parent_directory=".\\plugins\\semantic_functions", plugin_name="engagementInfoByCompany")
@@ -123,6 +127,8 @@ def speech_to_text():
     # Create a speech recognizer and start the recognition
     speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
     print("Your turn to speak...")
+
+    speech_recognizer.properties.set_property(speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "60000")
 
     result = speech_recognizer.recognize_once_async().get()
 

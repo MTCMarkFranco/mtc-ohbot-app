@@ -38,6 +38,10 @@ ohbot.move(ohbot.HEADNOD,5)
 # Set both eyes back to 5. 
 ohbot.move(ohbot.EYETILT,8)
 
+ohbot.move(ohbot.BOTTOMLIP, 5)
+ohbot.move(ohbot.TOPLIP, 5)
+
+
 print("Initilizing OhBot...")
 if (ohbot.connected == False):
     print("Ohbot Not connected!")
